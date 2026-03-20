@@ -14,7 +14,7 @@ import ScoreBadge from '../components/ScoreBadge';
 import type { MrDetailResponse } from '../types';
 
 function formatDate(iso: string | null): string {
-  if (!iso) return '—';
+  if (!iso) return '\u2014';
   return new Date(iso).toLocaleString();
 }
 
@@ -60,6 +60,8 @@ export default function MrDetailPage() {
   }
 
   if (!detail) return null;
+
+  const hasAnalysis = detail.score !== undefined && detail.score !== null && detail.verdict;
 
   return (
     <div>
@@ -146,13 +148,15 @@ export default function MrDetailPage() {
             </Card.Body>
           </Card>
 
-          <Card className="mt-3">
-            <Card.Header>Score</Card.Header>
-            <Card.Body className="d-flex align-items-center gap-3">
-              <ScoreBadge score={detail.score} verdict={detail.verdict} />
-              <span className="text-muted">{detail.verdict}</span>
-            </Card.Body>
-          </Card>
+          {hasAnalysis && (
+            <Card className="mt-3">
+              <Card.Header>Score</Card.Header>
+              <Card.Body className="d-flex align-items-center gap-3">
+                <ScoreBadge score={detail.score} verdict={detail.verdict} />
+                <span className="text-muted">{detail.verdict}</span>
+              </Card.Body>
+            </Card>
+          )}
         </Col>
       </Row>
 
@@ -167,51 +171,55 @@ export default function MrDetailPage() {
         </Card>
       )}
 
-      <Card className="mb-4">
-        <Card.Header>Score Breakdown</Card.Header>
-        <Card.Body className="p-0">
-          <Table hover bordered className="mb-0">
-            <thead className="table-light">
-              <tr>
-                <th>Rule</th>
-                <th>Type</th>
-                <th>Weight</th>
-                <th>Reason</th>
-              </tr>
-            </thead>
-            <tbody>
-              {detail.scoreBreakdown.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="text-center text-muted">
-                    No score breakdown available.
-                  </td>
-                </tr>
-              ) : (
-                detail.scoreBreakdown.map((entry, idx) => (
-                  <tr key={idx}>
-                    <td><code>{entry.rule}</code></td>
-                    <td>
-                      <Badge bg={entry.type === 'boost' ? 'success' : 'danger'}>
-                        {entry.type}
-                      </Badge>
-                    </td>
-                    <td>{entry.weight >= 0 ? '+' : ''}{entry.weight.toFixed(2)}</td>
-                    <td>{entry.reason}</td>
+      {hasAnalysis && (
+        <>
+          <Card className="mb-4">
+            <Card.Header>Score Breakdown</Card.Header>
+            <Card.Body className="p-0">
+              <Table hover bordered className="mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th>Rule</th>
+                    <th>Type</th>
+                    <th>Weight</th>
+                    <th>Reason</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </Table>
-        </Card.Body>
-      </Card>
+                </thead>
+                <tbody>
+                  {detail.scoreBreakdown.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="text-center text-muted">
+                        No score breakdown available.
+                      </td>
+                    </tr>
+                  ) : (
+                    detail.scoreBreakdown.map((entry, idx) => (
+                      <tr key={idx}>
+                        <td><code>{entry.rule}</code></td>
+                        <td>
+                          <Badge bg={entry.type === 'boost' ? 'success' : 'danger'}>
+                            {entry.type}
+                          </Badge>
+                        </td>
+                        <td>{entry.weight >= 0 ? '+' : ''}{entry.weight.toFixed(2)}</td>
+                        <td>{entry.reason}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </Table>
+            </Card.Body>
+          </Card>
 
-      {detail.llmComment && (
-        <Card className="mb-4">
-          <Card.Header>LLM Analysis</Card.Header>
-          <Card.Body>
-            <p style={{ whiteSpace: 'pre-wrap' }}>{detail.llmComment}</p>
-          </Card.Body>
-        </Card>
+          {detail.llmComment && (
+            <Card className="mb-4">
+              <Card.Header>LLM Analysis</Card.Header>
+              <Card.Body>
+                <p style={{ whiteSpace: 'pre-wrap' }}>{detail.llmComment}</p>
+              </Card.Body>
+            </Card>
+          )}
+        </>
       )}
 
       <div className="mb-4">

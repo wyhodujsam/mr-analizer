@@ -60,6 +60,16 @@ public class JpaAnalysisResultRepository implements AnalysisResultRepository {
         return springRepo.findById(id).map(this::toDomain);
     }
 
+    @Override
+    public void deleteById(Long id) {
+        springRepo.deleteById(id);
+    }
+
+    @Override
+    public Optional<AnalysisReport> findByProjectSlug(String projectSlug) {
+        return springRepo.findByProjectSlug(projectSlug).map(this::toDomain);
+    }
+
     // -------------------------------------------------------------------------
     // Mapping: domain -> entity
     // -------------------------------------------------------------------------

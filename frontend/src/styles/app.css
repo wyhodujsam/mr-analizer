@@ -30,13 +30,63 @@
   transition: background-color 0.15s ease;
 }
 
+/* Repo Selector */
+.repo-selector {
+  max-width: 800px;
+}
+
+.repo-selector .list-group-item {
+  border-radius: 0;
+}
+
+.repo-selector .list-group-item .btn-outline-danger {
+  padding: 0.1rem 0.4rem;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* MR Browse Table */
+.mr-browse-table {
+  font-size: 0.9rem;
+}
+
+.mr-browse-table tbody tr:hover {
+  background-color: rgba(13, 110, 253, 0.08);
+}
+
+/* Analysis History */
+.analysis-history {
+  margin-top: 1rem;
+}
+
+.analysis-history table {
+  font-size: 0.85rem;
+}
+
+.analysis-history .text-muted {
+  color: #6c757d !important;
+}
+
+/* Step separator */
+.step-separator {
+  border: none;
+  border-top: 2px solid #dee2e6;
+  margin: 1.5rem 0;
+}
+
+/* Cache badge */
+.cache-badge {
+  border-left: 4px solid #0dcaf0;
+}
+
 /* Responsive tweaks */
 @media (max-width: 768px) {
   .display-6 {
     font-size: 1.5rem;
   }
 
-  .mr-table {
+  .mr-table,
+  .mr-browse-table {
     font-size: 0.875rem;
   }
 
@@ -46,6 +96,10 @@
 
   h3 {
     font-size: 1.25rem;
+  }
+
+  .repo-selector {
+    max-width: 100%;
   }
 }
 

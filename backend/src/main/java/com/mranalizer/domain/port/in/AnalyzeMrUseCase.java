@@ -18,4 +18,11 @@ public interface AnalyzeMrUseCase {
      * @return the persisted analysis report
      */
     AnalysisReport analyze(FetchCriteria criteria, boolean useLlm);
+
+    /**
+     * Delete a previously saved analysis report.
+     *
+     * @param reportId the report ID to delete
+     */
+    void deleteAnalysis(Long reportId);
 }

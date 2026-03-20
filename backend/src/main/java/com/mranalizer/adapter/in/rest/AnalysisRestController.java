@@ -2,6 +2,7 @@ package com.mranalizer.adapter.in.rest;
 
 import com.mranalizer.adapter.in.rest.dto.AnalysisResponse;
 import com.mranalizer.adapter.in.rest.dto.MrDetailResponse;
+import com.mranalizer.application.AnalyzeMrService;
 import com.mranalizer.application.dto.AnalysisRequestDto;
 import com.mranalizer.application.dto.AnalysisSummaryDto;
 import com.mranalizer.domain.model.AnalysisReport;
@@ -22,11 +23,14 @@ public class AnalysisRestController {
 
     private final AnalyzeMrUseCase analyzeMrUseCase;
     private final GetAnalysisResultsUseCase getAnalysisResultsUseCase;
+    private final AnalyzeMrService analyzeMrService;
 
     public AnalysisRestController(AnalyzeMrUseCase analyzeMrUseCase,
-                                  GetAnalysisResultsUseCase getAnalysisResultsUseCase) {
+                                  GetAnalysisResultsUseCase getAnalysisResultsUseCase,
+                                  AnalyzeMrService analyzeMrService) {
         this.analyzeMrUseCase = analyzeMrUseCase;
         this.getAnalysisResultsUseCase = getAnalysisResultsUseCase;
+        this.analyzeMrService = analyzeMrService;
     }
 
     @PostMapping("/analysis")
@@ -45,8 +49,16 @@ public class AnalysisRestController {
     }
 
     @GetMapping("/analysis")
-    public ResponseEntity<List<AnalysisResponse>> listReports() {
+    public ResponseEntity<List<AnalysisResponse>> listReports(
+            @RequestParam(required = false) String projectSlug) {
         List<AnalysisReport> reports = getAnalysisResultsUseCase.getAllReports();
+
+        if (projectSlug != null && !projectSlug.isBlank()) {
+            reports = reports.stream()
+                    .filter(r -> projectSlug.equals(r.getProjectSlug()))
+                    .collect(Collectors.toList());
+        }
+
         List<AnalysisResponse> response = reports.stream()
                 .map(report -> new AnalysisResponse(
                         report.getId(),
@@ -68,6 +80,12 @@ public class AnalysisRestController {
         AnalysisReport report = getAnalysisResultsUseCase.getReport(reportId)
                 .orElseThrow(() -> new NoSuchElementException("Report not found: " + reportId));
         return ResponseEntity.ok(AnalysisResponse.from(report));
+    }
+
+    @DeleteMapping("/analysis/{reportId}")
+    public ResponseEntity<Void> deleteReport(@PathVariable Long reportId) {
+        analyzeMrService.deleteAnalysis(reportId);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/analysis/{reportId}/mrs/{resultId}")
