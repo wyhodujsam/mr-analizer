@@ -1,7 +1,9 @@
 package com.mranalizer;
 
 import com.mranalizer.adapter.in.rest.dto.AnalysisResponse;
+import com.mranalizer.adapter.in.rest.dto.MrBrowseResponse;
 import com.mranalizer.adapter.in.rest.dto.MrDetailResponse;
+import com.mranalizer.adapter.in.rest.dto.SavedRepoResponse;
 import com.mranalizer.application.dto.AnalysisRequestDto;
 import com.mranalizer.application.dto.AnalysisSummaryDto;
 import com.mranalizer.domain.model.*;
@@ -38,7 +40,7 @@ class IntegrationTest {
         setupMockProvider(3);
 
         AnalysisRequestDto request = new AnalysisRequestDto(
-                "owner/repo", "github", "main", "merged", null, null, 100, false);
+                "owner/post-analysis-test", "github", "main", "merged", null, null, 100, false, List.of());
 
         ResponseEntity<AnalysisResponse> response = restTemplate.postForEntity(
                 "/api/analysis", request, AnalysisResponse.class);
@@ -58,7 +60,7 @@ class IntegrationTest {
         setupMockProvider(2);
 
         AnalysisRequestDto request = new AnalysisRequestDto(
-                "owner/repo", "github", "main", "merged", null, null, 100, false);
+                "owner/get-analysis-test", "github", "main", "merged", null, null, 100, false, List.of());
 
         ResponseEntity<AnalysisResponse> postResponse = restTemplate.postForEntity(
                 "/api/analysis", request, AnalysisResponse.class);
@@ -80,7 +82,7 @@ class IntegrationTest {
         setupMockProvider(1);
 
         AnalysisRequestDto request = new AnalysisRequestDto(
-                "owner/repo", "github", "main", "merged", null, null, 100, false);
+                "owner/mr-detail-test", "github", "main", "merged", null, null, 100, false, List.of());
 
         ResponseEntity<AnalysisResponse> postResponse = restTemplate.postForEntity(
                 "/api/analysis", request, AnalysisResponse.class);
@@ -104,7 +106,7 @@ class IntegrationTest {
         setupMockProvider(3);
 
         AnalysisRequestDto request = new AnalysisRequestDto(
-                "owner/repo", "github", "main", "merged", null, null, 100, false);
+                "owner/summary-test", "github", "main", "merged", null, null, 100, false, List.of());
 
         ResponseEntity<AnalysisResponse> postResponse = restTemplate.postForEntity(
                 "/api/analysis", request, AnalysisResponse.class);
@@ -134,13 +136,123 @@ class IntegrationTest {
         when(mergeRequestProvider.getProviderName()).thenReturn("github");
 
         AnalysisRequestDto request = new AnalysisRequestDto(
-                "", "github", "main", "merged", null, null, 100, false);
+                "", "github", "main", "merged", null, null, 100, false, List.of());
 
         @SuppressWarnings("rawtypes")
         ResponseEntity<Map> response = restTemplate.postForEntity(
                 "/api/analysis", request, Map.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    // -------------------------------------------------------------------------
+    // Feature 002: browse, repos CRUD, delete analysis, cache
+    // -------------------------------------------------------------------------
+
+    @Test
+    void browseMrs_returnsList() {
+        setupMockProvider(3);
+
+        AnalysisRequestDto request = new AnalysisRequestDto(
+                "owner/repo", "github", "main", "merged", null, null, 100, false, List.of());
+
+        ResponseEntity<MrBrowseResponse[]> response = restTemplate.postForEntity(
+                "/api/browse", request, MrBrowseResponse[].class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        MrBrowseResponse[] body = response.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body).hasSize(3);
+        assertThat(body[0].title()).isNotBlank();
+    }
+
+    @Test
+    void savedRepos_crud() {
+        // POST — add a repo
+        Map<String, String> addRequest = Map.of("projectSlug", "test/crud-repo", "provider", "github");
+        ResponseEntity<SavedRepoResponse> addResponse = restTemplate.postForEntity(
+                "/api/repos", addRequest, SavedRepoResponse.class);
+        assertThat(addResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        SavedRepoResponse added = addResponse.getBody();
+        assertThat(added).isNotNull();
+        assertThat(added.projectSlug()).isEqualTo("test/crud-repo");
+        Long repoId = added.id();
+        assertThat(repoId).isNotNull();
+
+        // GET — list repos
+        ResponseEntity<SavedRepoResponse[]> listResponse = restTemplate.getForEntity(
+                "/api/repos", SavedRepoResponse[].class);
+        assertThat(listResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(listResponse.getBody()).isNotNull();
+        boolean found = false;
+        for (SavedRepoResponse r : listResponse.getBody()) {
+            if ("test/crud-repo".equals(r.projectSlug())) {
+                found = true;
+                break;
+            }
+        }
+        assertThat(found).isTrue();
+
+        // DELETE — remove repo
+        restTemplate.delete("/api/repos/" + repoId);
+
+        // Verify removed
+        ResponseEntity<SavedRepoResponse[]> afterDelete = restTemplate.getForEntity(
+                "/api/repos", SavedRepoResponse[].class);
+        assertThat(afterDelete.getBody()).isNotNull();
+        boolean stillPresent = false;
+        for (SavedRepoResponse r : afterDelete.getBody()) {
+            if ("test/crud-repo".equals(r.projectSlug())) {
+                stillPresent = true;
+                break;
+            }
+        }
+        assertThat(stillPresent).isFalse();
+    }
+
+    @Test
+    void deleteAnalysis_removesReport() {
+        setupMockProvider(1);
+
+        // Create analysis
+        AnalysisRequestDto request = new AnalysisRequestDto(
+                "owner/delete-test", "github", "main", "merged", null, null, 100, false, List.of());
+        ResponseEntity<AnalysisResponse> postResponse = restTemplate.postForEntity(
+                "/api/analysis", request, AnalysisResponse.class);
+        assertThat(postResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        Long reportId = postResponse.getBody().reportId();
+
+        // Delete analysis
+        restTemplate.delete("/api/analysis/" + reportId);
+
+        // Verify deleted — GET should return 404 or error
+        ResponseEntity<String> getResponse = restTemplate.getForEntity(
+                "/api/analysis/" + reportId, String.class);
+        // After deletion, the report should not be found (expect 404 or 500 with NoSuchElementException)
+        assertThat(getResponse.getStatusCode().value()).isGreaterThanOrEqualTo(400);
+    }
+
+    @Test
+    void cachedAnalysis_returnsInstantly() {
+        setupMockProvider(2);
+
+        AnalysisRequestDto request = new AnalysisRequestDto(
+                "owner/cache-test", "github", "main", "merged", null, null, 100, false, List.of());
+
+        // First analysis
+        ResponseEntity<AnalysisResponse> first = restTemplate.postForEntity(
+                "/api/analysis", request, AnalysisResponse.class);
+        assertThat(first.getStatusCode()).isEqualTo(HttpStatus.OK);
+        Long firstReportId = first.getBody().reportId();
+
+        // Second analysis — should return cached
+        ResponseEntity<AnalysisResponse> second = restTemplate.postForEntity(
+                "/api/analysis", request, AnalysisResponse.class);
+        assertThat(second.getStatusCode()).isEqualTo(HttpStatus.OK);
+        Long secondReportId = second.getBody().reportId();
+
+        // Same report ID means cache was used
+        assertThat(secondReportId).isEqualTo(firstReportId);
     }
 
     // -------------------------------------------------------------------------

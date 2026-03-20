@@ -53,6 +53,23 @@ public class InMemoryAnalysisResultRepository implements AnalysisResultRepositor
         return Optional.ofNullable(store.get(id));
     }
 
+    @Override
+    public void deleteById(Long id) {
+        store.remove(id);
+    }
+
+    @Override
+    public Optional<AnalysisReport> findByProjectSlug(String projectSlug) {
+        return store.values().stream()
+                .filter(r -> projectSlug.equals(r.getProjectSlug()))
+                .findFirst();
+    }
+
+    /** Removes all stored reports. Used for test isolation between scenarios. */
+    public void clear() {
+        store.clear();
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------

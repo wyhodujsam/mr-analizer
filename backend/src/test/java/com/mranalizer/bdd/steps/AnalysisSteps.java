@@ -31,6 +31,9 @@ public class AnalysisSteps {
     @Autowired
     private LlmAnalyzer llmAnalyzer;
 
+    @Autowired
+    private ScenarioContext scenarioContext;
+
     private AnalysisReport report;
     private Exception caughtException;
 
@@ -108,7 +111,8 @@ public class AnalysisSteps {
                 .limit(100)
                 .build();
         try {
-            report = analyzeMrUseCase.analyze(criteria, withLlm);
+            report = analyzeMrUseCase.analyze(criteria, withLlm, List.of());
+            scenarioContext.setLastAnalysisReport(report);
         } catch (Exception e) {
             caughtException = e;
         }

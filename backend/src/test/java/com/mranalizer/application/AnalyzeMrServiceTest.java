@@ -1,6 +1,7 @@
 package com.mranalizer.application;
 
 import com.mranalizer.domain.model.*;
+import com.mranalizer.domain.port.in.ManageReposUseCase;
 import com.mranalizer.domain.port.out.AnalysisResultRepository;
 import com.mranalizer.domain.port.out.LlmAnalyzer;
 import com.mranalizer.domain.port.out.MergeRequestProvider;
@@ -24,6 +25,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 class AnalyzeMrServiceTest {
@@ -36,6 +38,9 @@ class AnalyzeMrServiceTest {
 
     @Mock
     private AnalysisResultRepository repository;
+
+    @Mock
+    private ManageReposUseCase manageReposUseCase;
 
     private ScoringEngine scoringEngine;
     private List<Rule> rules;
@@ -53,7 +58,10 @@ class AnalyzeMrServiceTest {
                 PenalizeRule.byNoDescription(-0.3)
         );
 
-        service = new AnalyzeMrService(provider, llmAnalyzer, repository, scoringEngine, rules);
+        // Default: no cached analysis (cache miss)
+        lenient().when(repository.findByProjectSlug(any())).thenReturn(Optional.empty());
+
+        service = new AnalyzeMrService(provider, llmAnalyzer, repository, scoringEngine, rules, manageReposUseCase);
     }
 
     @Test
@@ -68,7 +76,7 @@ class AnalyzeMrServiceTest {
         when(provider.getProviderName()).thenReturn("github");
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        service.analyze(criteria, false);
+        service.analyze(criteria, false, List.of());
 
         ArgumentCaptor<FetchCriteria> captor = ArgumentCaptor.forClass(FetchCriteria.class);
         verify(provider).fetchMergeRequests(captor.capture());
@@ -95,7 +103,7 @@ class AnalyzeMrServiceTest {
         when(provider.getProviderName()).thenReturn("github");
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        AnalysisReport report = service.analyze(criteria, false);
+        AnalysisReport report = service.analyze(criteria, false, List.of());
 
         assertThat(report.getTotalMrs()).isEqualTo(3);
         assertThat(report.getResults()).hasSize(3);
@@ -111,7 +119,7 @@ class AnalyzeMrServiceTest {
         when(provider.getProviderName()).thenReturn("github");
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        service.analyze(criteria, false);
+        service.analyze(criteria, false, List.of());
 
         ArgumentCaptor<AnalysisReport> captor = ArgumentCaptor.forClass(AnalysisReport.class);
         verify(repository).save(captor.capture());
@@ -138,7 +146,7 @@ class AnalyzeMrServiceTest {
         when(llmAnalyzer.analyze(any())).thenReturn(new LlmAssessment(0.1, "looks good", "test-llm"));
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        service.analyze(criteria, true);
+        service.analyze(criteria, true, List.of());
 
         verify(llmAnalyzer, times(2)).analyze(any(MergeRequest.class));
     }
@@ -153,7 +161,7 @@ class AnalyzeMrServiceTest {
         when(provider.getProviderName()).thenReturn("github");
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        service.analyze(criteria, false);
+        service.analyze(criteria, false, List.of());
 
         verify(llmAnalyzer, never()).analyze(any(MergeRequest.class));
     }
@@ -169,7 +177,7 @@ class AnalyzeMrServiceTest {
         when(llmAnalyzer.analyze(any())).thenThrow(new RuntimeException("LLM service down"));
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        AnalysisReport report = service.analyze(criteria, true);
+        AnalysisReport report = service.analyze(criteria, true, List.of());
 
         assertThat(report.getResults()).hasSize(1);
         AnalysisResult result = report.getResults().get(0);
@@ -208,6 +216,52 @@ class AnalyzeMrServiceTest {
         assertThat(result).isPresent();
         assertThat(result.get().getId()).isEqualTo(10L);
         assertThat(result.get().getScore()).isEqualTo(0.8);
+    }
+
+    // -------------------------------------------------------------------------
+    // Cache & delete tests (feature 002-mr-browse-analyze)
+    // -------------------------------------------------------------------------
+
+    @Test
+    void analyze_returnsCachedWhenExists() {
+        FetchCriteria criteria = FetchCriteria.builder()
+                .projectSlug("owner/repo")
+                .state("merged")
+                .build();
+
+        AnalysisReport cached = AnalysisReport.of(
+                99L, "owner/repo", "github", LocalDateTime.now(), List.of());
+        when(repository.findByProjectSlug("owner/repo")).thenReturn(Optional.of(cached));
+
+        AnalysisReport result = service.analyze(criteria, false, List.of());
+
+        assertThat(result.getId()).isEqualTo(99L);
+        verify(provider, never()).fetchMergeRequests(any());
+    }
+
+    @Test
+    void analyze_calculatesWhenNoCache() {
+        FetchCriteria criteria = FetchCriteria.builder()
+                .projectSlug("owner/repo")
+                .state("merged")
+                .build();
+
+        when(repository.findByProjectSlug("owner/repo")).thenReturn(Optional.empty());
+        when(provider.fetchMergeRequests(any())).thenReturn(List.of(buildMr(1L, "MR 1", "desc", 5)));
+        when(provider.getProviderName()).thenReturn("github");
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        AnalysisReport result = service.analyze(criteria, false, List.of());
+
+        assertThat(result.getResults()).hasSize(1);
+        verify(provider).fetchMergeRequests(any());
+    }
+
+    @Test
+    void deleteAnalysis_delegatesToRepository() {
+        service.deleteAnalysis(42L);
+
+        verify(repository).deleteById(42L);
     }
 
     // -------------------------------------------------------------------------

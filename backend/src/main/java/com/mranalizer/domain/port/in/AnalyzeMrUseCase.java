@@ -17,5 +17,12 @@ public interface AnalyzeMrUseCase {
      * @param useLlm   whether to invoke the LLM analyzer in addition to rule-based analysis
      * @return the persisted analysis report
      */
-    AnalysisReport analyze(FetchCriteria criteria, boolean useLlm);
+    AnalysisReport analyze(FetchCriteria criteria, boolean useLlm, java.util.List<String> selectedMrIds);
+
+    /**
+     * Delete a previously saved analysis report.
+     *
+     * @param reportId the report ID to delete
+     */
+    void deleteAnalysis(Long reportId);
 }
