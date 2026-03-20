@@ -111,7 +111,7 @@ public class AnalysisSteps {
                 .limit(100)
                 .build();
         try {
-            report = analyzeMrUseCase.analyze(criteria, withLlm);
+            report = analyzeMrUseCase.analyze(criteria, withLlm, List.of());
             scenarioContext.setLastAnalysisReport(report);
         } catch (Exception e) {
             caughtException = e;

@@ -37,6 +37,9 @@ export default function DashboardPage() {
   const [limit, setLimit] = useState(100);
   const [useLlm, setUseLlm] = useState(false);
 
+  // MR selection
+  const [selectedMrIds, setSelectedMrIds] = useState<Set<string>>(new Set());
+
   // State machine
   const [step, setStep] = useState<Step>('select');
   const [browsedMrs, setBrowsedMrs] = useState<MrBrowseItem[]>([]);
@@ -148,6 +151,7 @@ export default function DashboardPage() {
     try {
       const items = await browseMrs(buildRequest());
       setBrowsedMrs(items);
+      setSelectedMrIds(new Set(items.map(i => i.externalId)));
       setStep('browse');
     } catch (err: unknown) {
       setError(extractError(err));
@@ -160,7 +164,9 @@ export default function DashboardPage() {
     setLoadingAnalyze(true);
     setError(null);
     try {
-      const result = await runAnalysis(buildRequest());
+      const req = buildRequest();
+      req.selectedMrIds = [...selectedMrIds];
+      const result = await runAnalysis(req);
       setAnalysisResponse(result);
       setStep('analyzed');
       setCachedAnalysis(result);
@@ -371,7 +377,7 @@ export default function DashboardPage() {
             <Button
               variant="success"
               onClick={handleAnalyze}
-              disabled={loadingAnalyze}
+              disabled={loadingAnalyze || selectedMrIds.size === 0}
             >
               {loadingAnalyze ? (
                 <>
@@ -379,11 +385,15 @@ export default function DashboardPage() {
                   Analizowanie...
                 </>
               ) : (
-                'Analizuj'
+                `Analizuj (${selectedMrIds.size} z ${browsedMrs.length})`
               )}
             </Button>
           </div>
-          <MrBrowseTable items={browsedMrs} />
+          <MrBrowseTable
+            items={browsedMrs}
+            selectedIds={selectedMrIds}
+            onSelectionChange={setSelectedMrIds}
+          />
         </div>
       )}
 

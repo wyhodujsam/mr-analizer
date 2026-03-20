@@ -40,7 +40,7 @@ class IntegrationTest {
         setupMockProvider(3);
 
         AnalysisRequestDto request = new AnalysisRequestDto(
-                "owner/post-analysis-test", "github", "main", "merged", null, null, 100, false);
+                "owner/post-analysis-test", "github", "main", "merged", null, null, 100, false, List.of());
 
         ResponseEntity<AnalysisResponse> response = restTemplate.postForEntity(
                 "/api/analysis", request, AnalysisResponse.class);
@@ -60,7 +60,7 @@ class IntegrationTest {
         setupMockProvider(2);
 
         AnalysisRequestDto request = new AnalysisRequestDto(
-                "owner/get-analysis-test", "github", "main", "merged", null, null, 100, false);
+                "owner/get-analysis-test", "github", "main", "merged", null, null, 100, false, List.of());
 
         ResponseEntity<AnalysisResponse> postResponse = restTemplate.postForEntity(
                 "/api/analysis", request, AnalysisResponse.class);
@@ -82,7 +82,7 @@ class IntegrationTest {
         setupMockProvider(1);
 
         AnalysisRequestDto request = new AnalysisRequestDto(
-                "owner/mr-detail-test", "github", "main", "merged", null, null, 100, false);
+                "owner/mr-detail-test", "github", "main", "merged", null, null, 100, false, List.of());
 
         ResponseEntity<AnalysisResponse> postResponse = restTemplate.postForEntity(
                 "/api/analysis", request, AnalysisResponse.class);
@@ -106,7 +106,7 @@ class IntegrationTest {
         setupMockProvider(3);
 
         AnalysisRequestDto request = new AnalysisRequestDto(
-                "owner/summary-test", "github", "main", "merged", null, null, 100, false);
+                "owner/summary-test", "github", "main", "merged", null, null, 100, false, List.of());
 
         ResponseEntity<AnalysisResponse> postResponse = restTemplate.postForEntity(
                 "/api/analysis", request, AnalysisResponse.class);
@@ -136,7 +136,7 @@ class IntegrationTest {
         when(mergeRequestProvider.getProviderName()).thenReturn("github");
 
         AnalysisRequestDto request = new AnalysisRequestDto(
-                "", "github", "main", "merged", null, null, 100, false);
+                "", "github", "main", "merged", null, null, 100, false, List.of());
 
         @SuppressWarnings("rawtypes")
         ResponseEntity<Map> response = restTemplate.postForEntity(
@@ -154,7 +154,7 @@ class IntegrationTest {
         setupMockProvider(3);
 
         AnalysisRequestDto request = new AnalysisRequestDto(
-                "owner/repo", "github", "main", "merged", null, null, 100, false);
+                "owner/repo", "github", "main", "merged", null, null, 100, false, List.of());
 
         ResponseEntity<MrBrowseResponse[]> response = restTemplate.postForEntity(
                 "/api/browse", request, MrBrowseResponse[].class);
@@ -216,7 +216,7 @@ class IntegrationTest {
 
         // Create analysis
         AnalysisRequestDto request = new AnalysisRequestDto(
-                "owner/delete-test", "github", "main", "merged", null, null, 100, false);
+                "owner/delete-test", "github", "main", "merged", null, null, 100, false, List.of());
         ResponseEntity<AnalysisResponse> postResponse = restTemplate.postForEntity(
                 "/api/analysis", request, AnalysisResponse.class);
         assertThat(postResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -237,7 +237,7 @@ class IntegrationTest {
         setupMockProvider(2);
 
         AnalysisRequestDto request = new AnalysisRequestDto(
-                "owner/cache-test", "github", "main", "merged", null, null, 100, false);
+                "owner/cache-test", "github", "main", "merged", null, null, 100, false, List.of());
 
         // First analysis
         ResponseEntity<AnalysisResponse> first = restTemplate.postForEntity(

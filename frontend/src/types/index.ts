@@ -71,6 +71,7 @@ export interface AnalysisRequest {
   before?: string;
   limit: number;
   useLlm: boolean;
+  selectedMrIds?: string[];
 }
 
 export interface ErrorResponse {

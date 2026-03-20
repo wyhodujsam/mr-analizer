@@ -42,7 +42,7 @@ public class AnalyzeMrService implements AnalyzeMrUseCase, GetAnalysisResultsUse
     }
 
     @Override
-    public AnalysisReport analyze(FetchCriteria criteria, boolean useLlm) {
+    public AnalysisReport analyze(FetchCriteria criteria, boolean useLlm, List<String> selectedMrIds) {
         // Cache detection: if report exists for same slug, return it
         Optional<AnalysisReport> cached = repository.findByProjectSlug(criteria.getProjectSlug());
         if (cached.isPresent()) {
@@ -50,6 +50,13 @@ public class AnalyzeMrService implements AnalyzeMrUseCase, GetAnalysisResultsUse
         }
 
         List<MergeRequest> mergeRequests = provider.fetchMergeRequests(criteria);
+
+        // Filter by selected MR IDs if provided
+        if (selectedMrIds != null && !selectedMrIds.isEmpty()) {
+            mergeRequests = mergeRequests.stream()
+                    .filter(mr -> selectedMrIds.contains(mr.getExternalId()))
+                    .toList();
+        }
 
         List<AnalysisResult> results = new ArrayList<>();
         for (MergeRequest mr : mergeRequests) {

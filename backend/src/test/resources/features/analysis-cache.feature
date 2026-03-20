@@ -24,6 +24,11 @@ Feature: Analysis caching and management
     And I trigger analysis for "owner/repo" again
     Then the provider should have been called twice
 
+  Scenario: User can select specific MRs for analysis
+    When I trigger analysis for "owner/repo" with selected MR ids "1,3"
+    Then the selected analysis report should contain 2 results
+    And the selected results should only include MR ids "1,3"
+
   Scenario: Analysis history shows all past analyses with dates and counts
     When I trigger analysis for "owner/repo"
     Then the analysis history should contain a report for "owner/repo"

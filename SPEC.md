@@ -2,7 +2,7 @@
 
 ## Cel
 
-Aplikacja webowa analizujaca Merge Requesty (GitLab) i Pull Requesty (GitHub), oceniajaca ktore z nich moglyby zostac wykonane automatycznie przez LLM. Raport ze scoringiem, statystykami i mozliwoscia filtrowania.
+Aplikacja webowa analizujaca Merge Requesty (GitLab) i Pull Requesty (GitHub), oceniajaca ktore z nich moglyby zostac wykonane automatycznie przez LLM. Dwuetapowy flow: najpierw przegladanie MR/PR, potem analiza z scoringiem. Raport ze statystykami, mozliwoscia filtrowania i selekcji konkretnych MR.
 
 ## Metodologia
 
@@ -27,7 +27,7 @@ BDD (Behavior-Driven Development) to podejscie test-first, w ktorym testy opisuj
 1. **Scenariusze biznesowe, nie techniczne** — kazdy scenariusz opisuje story/feature/capability z punktu widzenia uzytkownika, unikajac szczegolow implementacyjnych
 2. **Test-first** — scenariusze .feature pisane PRZED implementacja, na podstawie acceptance criteria z user stories (spec.md)
 3. **Zrozumiale dla nietechnicznych** — scenariusze w formacie Given/When/Then sa czytelne dla kazdego interesariusza
-4. **Zywadokumentacja** — pliki .feature sluza jednoczesnie jako testy akceptacyjne i dokumentacja zachowan systemu
+4. **Zywa dokumentacja** — pliki .feature sluza jednoczesnie jako testy akceptacyjne i dokumentacja zachowan systemu
 5. **Mapowanie na user stories** — kazda user story z spec.md ma odpowiadajace scenariusze .feature
 
 **Workflow BDD:**
@@ -45,60 +45,49 @@ User Story (spec.md)
 **Struktura plikow:**
 
 ```
-backend/src/test/resources/features/          # pliki .feature (Gherkin)
+backend/src/test/resources/features/       # pliki .feature (Gherkin)
+    scoring.feature                        # reguly i scoring (8 scenariuszy)
+    analysis.feature                       # analiza end-to-end + LLM (7 scenariuszy)
+    provider.feature                       # pobieranie MR z GitHub (3 scenariusze)
+    browse-repos.feature                   # przegladanie MR + zarzadzanie repo (5 scenariuszy)
+    analysis-cache.feature                 # cache analiz + selekcja MR (5 scenariuszy)
+
 backend/src/test/java/com/mranalizer/bdd/
-    CucumberTestRunner.java                   # JUnit runner
-    steps/                                    # step definitions
-        AnalysisSteps.java
-        ProviderSteps.java
-        ScoringSteps.java
-```
-
-Przyklady scenariuszy:
-
-```gherkin
-Feature: Analiza MR pod katem automatyzacji
-
-  Scenario: MR z refaktoringiem dostaje wysoki score
-    Given repozytorium "owner/repo" z providerem "github"
-    And MR #42 z tytulem "Refactor user service"
-    And MR ma 5 zmienionych plikow
-    And MR ma testy
-    When uruchamiam analize MR #42
-    Then score powinien byc wiekszy niz 0.7
-    And verdict powinien byc "AUTOMATABLE"
-
-  Scenario: MR hotfix jest wykluczony
-    Given MR #99 z labelem "hotfix"
-    When uruchamiam analize MR #99
-    Then verdict powinien byc "NOT_SUITABLE"
-    And reason powinien zawierac "excluded by label rule"
+    CucumberTest.java                      # JUnit Platform Suite runner
+    CucumberSpringConfig.java              # Spring Boot context + @MockBean
+    steps/
+        ScoringSteps.java                  # scoring + reguly
+        AnalysisSteps.java                 # analiza end-to-end
+        ProviderSteps.java                 # GitHub provider
+        BrowseRepoSteps.java              # przegladanie + repo management
+        AnalysisCacheSteps.java           # cache + selekcja MR
+        ScenarioContext.java               # shared state miedzy step classes
+        DatabaseCleanupHooks.java          # czyszczenie danych przed scenariuszem
 ```
 
 ## Stack technologiczny
 
 ### Backend
 - **Java 17**
-- **Spring Boot 3.x** (Web, Validation)
+- **Spring Boot 3.2** (Web, Validation, Data JPA, WebFlux client)
 - **Maven**
-- **H2** — baza danych (dev), z mozliwoscia przejscia na PostgreSQL
-- **Spring Data JPA** — persystencja
+- **H2** — baza danych (file-based `./data/mranalizer`), z mozliwoscia przejscia na PostgreSQL
+- **Spring Data JPA** — persystencja (AnalysisReport, AnalysisResult, SavedRepository)
 - **WebClient (Spring WebFlux)** — klient HTTP do API GitLab/GitHub
-- **Cucumber + JUnit 5** — testy BDD
-- **JUnit 5 + Mockito** — testy jednostkowe
-- **Lombok** — redukcja boilerplate'u
+- **Cucumber 7 + JUnit 5** — testy BDD (28 scenariuszy)
+- **JUnit 5 + Mockito** — testy jednostkowe (57 testow)
+- **MockWebServer** — mockowanie GitHub API w testach integracyjnych
 
 ### Frontend
-- **React 18** + **TypeScript**
-- **Vite** — bundler
+- **React 18** + **TypeScript 5**
+- **Vite 5** — bundler + dev server z proxy
 - **Bootstrap 5** (React-Bootstrap) — UI components
-- **Chart.js** (react-chartjs-2) — wykresy (Faza 2+)
 - **Axios** — HTTP client do REST API
-- **React Router** — routing
+- **React Router v6** — routing
 
-## Architektura
+## Architektura heksagonalna
 
-Dwa oddzielne moduly: backend (Spring Boot REST API, port 8083) i frontend (React SPA, dev port 3000, w produkcji serwowany przez backend jako static resources).
+Dwa oddzielne moduly: backend (Spring Boot REST API, port 8083) i frontend (React SPA, dev port 3000, proxy do backend).
 
 ```
 mr_analizer/
@@ -110,65 +99,84 @@ mr_analizer/
 │       │   │
 │       │   ├── domain/                      # RDZEN — czysta logika, zero zaleznosci
 │       │   │   ├── model/
-│       │   │   │   ├── MergeRequest.java
-│       │   │   │   ├── ChangedFile.java
-│       │   │   │   ├── DiffStats.java
-│       │   │   │   ├── AnalysisResult.java
+│       │   │   │   ├── MergeRequest.java    # zunifikowany MR/PR (19 pol)
+│       │   │   │   ├── ChangedFile.java     # record
+│       │   │   │   ├── DiffStats.java       # record
+│       │   │   │   ├── AnalysisResult.java  # score + verdict + reasons
+│       │   │   │   ├── AnalysisReport.java  # raport zbiorczy z counts
 │       │   │   │   ├── Verdict.java         # enum: AUTOMATABLE, MAYBE, NOT_SUITABLE
-│       │   │   │   └── AnalysisReport.java
+│       │   │   │   ├── FetchCriteria.java   # kryteria pobierania MR
+│       │   │   │   ├── LlmAssessment.java   # record: scoreAdjustment + comment
+│       │   │   │   ├── RuleResult.java      # record: ruleName + matched + weight + reason
+│       │   │   │   └── SavedRepository.java # zapisane repozytorium
 │       │   │   ├── rules/
-│       │   │   │   ├── Rule.java
-│       │   │   │   ├── RuleResult.java
-│       │   │   │   ├── ExcludeRule.java
-│       │   │   │   ├── BoostRule.java
-│       │   │   │   └── PenalizeRule.java
+│       │   │   │   ├── Rule.java            # interfejs reguly
+│       │   │   │   ├── ExcludeRule.java     # factory: byLabels, byMinFiles, byMaxFiles, byExtensions
+│       │   │   │   ├── BoostRule.java       # factory: byKeywords, byHasTests, byFilesRange, byLabels
+│       │   │   │   └── PenalizeRule.java    # factory: byLargeDiff, byNoDescription, byTouchesConfig
 │       │   │   ├── scoring/
-│       │   │   │   ├── ScoringEngine.java
-│       │   │   │   └── ScoringConfig.java
+│       │   │   │   ├── ScoringEngine.java   # evaluates rules → score → verdict
+│       │   │   │   └── ScoringConfig.java   # baseScore, thresholds
 │       │   │   └── port/
 │       │   │       ├── in/
-│       │   │       │   ├── AnalyzeMrUseCase.java
-│       │   │       │   ├── GetAnalysisResultsUseCase.java
-│       │   │       │   └── ManageRulesUseCase.java
+│       │   │       │   ├── AnalyzeMrUseCase.java          # analyze + deleteAnalysis
+│       │   │       │   ├── GetAnalysisResultsUseCase.java # getAll, getReport, getResult
+│       │   │       │   ├── BrowseMrUseCase.java           # browse MR bez analizy
+│       │   │       │   └── ManageReposUseCase.java        # CRUD saved repos
 │       │   │       └── out/
-│       │   │           ├── MergeRequestProvider.java
-│       │   │           ├── LlmAnalyzer.java
-│       │   │           └── AnalysisResultRepository.java
+│       │   │           ├── MergeRequestProvider.java      # port: GitHub/GitLab
+│       │   │           ├── LlmAnalyzer.java               # port: Claude CLI/NoOp
+│       │   │           ├── AnalysisResultRepository.java  # port: persystencja analiz
+│       │   │           └── SavedRepositoryPort.java       # port: persystencja repo
 │       │   │
 │       │   ├── application/                 # USE CASES — orkiestracja
-│       │   │   ├── AnalyzeMrService.java
+│       │   │   ├── AnalyzeMrService.java    # analiza + cache detection + selekcja MR
+│       │   │   ├── BrowseMrService.java     # pobieranie MR bez scoringu
+│       │   │   ├── ManageReposService.java  # CRUD saved repos
 │       │   │   └── dto/
-│       │   │       ├── AnalysisRequestDto.java
+│       │   │       ├── AnalysisRequestDto.java  # incl. selectedMrIds
 │       │   │       └── AnalysisSummaryDto.java
 │       │   │
 │       │   └── adapter/                     # ADAPTERY
-│       │       ├── in/
-│       │       │   └── rest/
-│       │       │       ├── AnalysisRestController.java   # REST API
-│       │       │       └── dto/
-│       │       │           ├── AnalysisResponse.java
-│       │       │           └── MrDetailResponse.java
+│       │       ├── in/rest/
+│       │       │   ├── AnalysisRestController.java  # POST/GET/DELETE /api/analysis
+│       │       │   ├── BrowseRestController.java    # POST /api/browse
+│       │       │   ├── RepoRestController.java      # GET/POST/DELETE /api/repos
+│       │       │   ├── GlobalExceptionHandler.java
+│       │       │   └── dto/
+│       │       │       ├── AnalysisResponse.java
+│       │       │       ├── MrDetailResponse.java
+│       │       │       ├── MrBrowseResponse.java
+│       │       │       ├── SavedRepoResponse.java
+│       │       │       └── ErrorResponse.java
 │       │       ├── out/
-│       │       │   ├── provider/
-│       │       │   │   ├── github/
-│       │       │   │   │   ├── GitHubAdapter.java
-│       │       │   │   │   ├── GitHubClient.java
-│       │       │   │   │   └── GitHubMapper.java
-│       │       │   │   └── gitlab/
-│       │       │   │       ├── GitLabAdapter.java
-│       │       │   │       ├── GitLabClient.java
-│       │       │   │       └── GitLabMapper.java
+│       │       │   ├── provider/github/
+│       │       │   │   ├── GitHubAdapter.java       # impl MergeRequestProvider
+│       │       │   │   ├── GitHubClient.java        # WebClient + pagination + rate limit
+│       │       │   │   ├── GitHubMapper.java        # GitHub DTO → domain
+│       │       │   │   ├── RateLimitException.java
+│       │       │   │   └── dto/
+│       │       │   │       ├── GitHubPullRequest.java
+│       │       │   │       └── GitHubFile.java
 │       │       │   ├── llm/
-│       │       │   │   ├── ClaudeCliAdapter.java
+│       │       │   │   ├── ClaudeCliAdapter.java    # ProcessBuilder + timeout + fallback
 │       │       │   │   └── NoOpLlmAdapter.java
 │       │       │   └── persistence/
 │       │       │       ├── JpaAnalysisResultRepository.java
+│       │       │       ├── InMemoryAnalysisResultRepository.java  # @Profile("test")
+│       │       │       ├── JpaSavedRepositoryAdapter.java
+│       │       │       ├── InMemorySavedRepositoryAdapter.java    # @Profile("test")
+│       │       │       ├── SpringDataAnalysisResultRepository.java
+│       │       │       ├── SpringDataSavedRepoRepository.java
 │       │       │       └── entity/
-│       │       │           └── AnalysisResultEntity.java
+│       │       │           ├── AnalysisReportEntity.java
+│       │       │           ├── AnalysisResultEntity.java
+│       │       │           └── SavedRepositoryEntity.java
 │       │       └── config/
 │       │           ├── ProviderConfig.java
 │       │           ├── LlmConfig.java
-│       │           └── CorsConfig.java
+│       │           ├── CorsConfig.java
+│       │           └── RulesConfig.java
 │       └── main/resources/
 │           └── application.yml
 │
@@ -178,24 +186,29 @@ mr_analizer/
 │   ├── vite.config.ts
 │   └── src/
 │       ├── main.tsx
-│       ├── App.tsx
+│       ├── App.tsx                          # React Router: /, /mr/:reportId/:resultId
 │       ├── api/
-│       │   └── analysisApi.ts               # Axios client do REST API
+│       │   └── analysisApi.ts              # Axios: analysis, browse, repos, delete
 │       ├── components/
-│       │   ├── Layout.tsx                   # navbar + layout
-│       │   ├── AnalysisForm.tsx             # formularz uruchomienia analizy
-│       │   ├── MrTable.tsx                  # tabela wynikow
-│       │   ├── ScoreBadge.tsx               # kolorowy badge score/verdict
-│       │   └── SummaryCard.tsx              # podsumowanie (automatable/maybe/not)
+│       │   ├── Layout.tsx                  # navbar + Outlet
+│       │   ├── RepoSelector.tsx            # dropdown saved repos + manual input
+│       │   ├── MrBrowseTable.tsx           # tabela MR z checkboxami (bez scoringu)
+│       │   ├── MrTable.tsx                 # tabela wynikow ze scoringiem
+│       │   ├── AnalysisForm.tsx            # formularz (branch, daty, limit, LLM)
+│       │   ├── AnalysisHistory.tsx         # historia analiz z przyciskiem usun
+│       │   ├── ScoreBadge.tsx              # kolorowy badge score/verdict
+│       │   └── SummaryCard.tsx             # 3 karty: automatable/maybe/not suitable
 │       ├── pages/
-│       │   ├── DashboardPage.tsx            # glowny widok
-│       │   └── MrDetailPage.tsx             # szczegoly MR + score breakdown
+│       │   ├── DashboardPage.tsx           # dwuetapowy flow: browse → analyze
+│       │   └── MrDetailPage.tsx            # szczegoly MR + score breakdown (opcjonalny)
 │       ├── types/
-│       │   └── index.ts                     # TypeScript interfaces (MergeRequest, AnalysisResult, etc.)
+│       │   └── index.ts                    # TypeScript interfaces
 │       └── styles/
-│           └── app.css
+│           └── app.css                     # verdict colors, responsive
 │
 ├── specs/                                   # SDD feature specs
+│   ├── 001-mvp-core/                       # DONE — MVP
+│   └── 002-mr-browse-analyze/              # DONE — browse + repos + cache + selekcja
 ├── .specify/                                # Spec Kit infrastructure
 ├── .claude/commands/                        # speckit commands
 ├── CLAUDE.md
@@ -203,83 +216,47 @@ mr_analizer/
 └── .gitignore
 ```
 
-## REST API (backend)
+## REST API
 
 ```
-POST   /api/analysis              # uruchom analize (body: provider, projectSlug, branch, dateRange, limit)
-GET    /api/analysis              # lista wynikow analiz
-GET    /api/analysis/{id}         # szczegoly analizy
-GET    /api/analysis/{id}/mrs     # lista MR z wynikami dla danej analizy
-GET    /api/mrs/{id}              # szczegoly MR + score breakdown
-GET    /api/summary               # podsumowanie (counts per verdict)
+POST   /api/browse                   # pobierz MR/PR bez analizy (body: criteria)
+POST   /api/analysis                 # uruchom analize (body: criteria + selectedMrIds)
+GET    /api/analysis                 # lista raportow analiz (?projectSlug= filtr)
+GET    /api/analysis/{reportId}      # szczegoly raportu z wynikami
+DELETE /api/analysis/{reportId}      # usun zapisana analize
+GET    /api/analysis/{reportId}/mrs/{resultId}  # szczegoly MR + score breakdown
+GET    /api/summary/{reportId}       # podsumowanie (counts per verdict)
+GET    /api/repos                    # lista zapisanych repozytoriow
+POST   /api/repos                    # dodaj repo (body: projectSlug, provider)
+DELETE /api/repos/{id}               # usun repo z listy
 ```
 
-## Model domenowy
+## GUI — flow uzytkownika
 
-### MergeRequest (zunifikowany)
+### Dwuetapowy flow (zaimplementowany)
 
-```java
-public class MergeRequest {
-    private Long id;
-    private String externalId;         // numer MR/PR u providera
-    private String title;
-    private String description;
-    private String author;
-    private String sourceBranch;
-    private String targetBranch;
-    private String state;              // merged, closed, open
-    private LocalDateTime createdAt;
-    private LocalDateTime mergedAt;
-    private List<String> labels;
-    private List<ChangedFile> changedFiles;
-    private DiffStats diffStats;
-    private boolean hasTests;
-    private boolean ciPassed;
-    private int approvalsCount;
-    private int commentsCount;
-    private String provider;           // "github" / "gitlab"
-    private String url;
-    private String projectSlug;        // owner/repo
-}
-```
+1. **Wybor repo** — RepoSelector: dropdown zapisanych repozytoriow + pole na nowy slug
+2. **Pobierz MR** — formularz (branch, daty, limit) → klik "Pobierz MR" → MrBrowseTable (lista MR bez scoringu, z checkboxami do selekcji)
+3. **Analizuj** — zaznacz MR checkboxami → klik "Analizuj (N z M)" → SummaryCard + MrTable z kolorami i scorami
+4. **Szczegoly MR** — klik na wiersz → nowa karta z MrDetailPage (dane MR + score breakdown jesli analiza istnieje)
+5. **Cache** — jesli analiza juz istnieje, badge "Analiza istnieje" z opcja wczytaj/usun
+6. **Historia** — AnalysisHistory na dole dashboardu: lista analiz z przyciskiem "Usun"
 
-### AnalysisResult
+### Faza 2 — Rozszerzenie (planowane)
 
-```java
-public class AnalysisResult {
-    private Long id;
-    private MergeRequest mergeRequest;
-    private double score;              // 0.0 - 1.0
-    private Verdict verdict;           // AUTOMATABLE, MAYBE, NOT_SUITABLE
-    private List<String> reasons;
-    private List<String> matchedRules;
-    private String llmComment;         // opcjonalny komentarz z LLM
-    private LocalDateTime analyzedAt;
-}
-```
+- Wykresy (Chart.js): rozklad score, trend w czasie, top autorzy
+- Filtrowanie: po autorze, repo, dacie, verdict
+- Wyszukiwarka MR
+- Porownanie repozytoriow
 
-## Porty (interfejsy)
+### Faza 3 — Zaawansowane (planowane)
 
-### MergeRequestProvider (port wyjsciowy)
-
-```java
-public interface MergeRequestProvider {
-    List<MergeRequest> fetchMergeRequests(FetchCriteria criteria);
-    MergeRequest fetchMergeRequest(String projectSlug, String mrId);
-    String getProviderName();  // "github" / "gitlab"
-}
-```
-
-### LlmAnalyzer (port wyjsciowy)
-
-```java
-public interface LlmAnalyzer {
-    LlmAssessment analyze(MergeRequest mr);
-    String getProviderName();  // "claude-cli", "openai", "none"
-}
-```
-
-Implementacja `ClaudeCliAdapter` — wywoluje `claude -p "prompt"` jako process, parsuje odpowiedz. Dziala w ramach istniejacej subskrypcji, zero kosztow API.
+- Dashboard z widgetami (statystyki per zespol/osoba)
+- Eksport do CSV/PDF
+- Tryb CI — webhook, automatyczna analiza nowych MR
+- Konfiguracja regul przez GUI
+- Adapter GitLab
+- Adapter LLM przez API (Claude API, OpenAI API)
 
 ## System regul i scoring
 
@@ -289,131 +266,49 @@ Implementacja `ClaudeCliAdapter` — wywoluje `claude -p "prompt"` jako process,
 | `boost` | score += weight (np. +0.15) |
 | `penalize` | score -= weight (np. -0.2) |
 
-**Konfiguracja w `application.yml`:**
+Scoring: base score 0.5 + sum(boost weights) - sum(penalize weights) + LLM adjustment. Clamped to [0.0, 1.0]. Verdict thresholds: >= 0.7 AUTOMATABLE, >= 0.4 MAYBE, < 0.4 NOT_SUITABLE.
 
-```yaml
-mr-analizer:
-  provider: github  # lub gitlab
-  github:
-    token: ${GITHUB_TOKEN}
-    api-url: https://api.github.com
-  gitlab:
-    token: ${GITLAB_TOKEN}
-    api-url: https://gitlab.example.com/api/v4
-
-  llm:
-    adapter: claude-cli  # claude-cli | none
-    claude-cli:
-      command: claude
-      timeout-seconds: 60
-
-  scoring:
-    base-score: 0.5
-    automatable-threshold: 0.7
-    maybe-threshold: 0.4
-
-  rules:
-    exclude:
-      min-changed-files: 2
-      max-changed-files: 50
-      file-extensions-only: [".env", ".yml", ".toml", ".lock"]
-      labels: ["hotfix", "security", "emergency"]
-    boost:
-      description-keywords:
-        words: ["refactor", "cleanup", "add test", "rename"]
-        weight: 0.2
-      has-tests:
-        weight: 0.15
-      changed-files-range:
-        min: 3
-        max: 15
-        weight: 0.1
-      labels:
-        values: ["tech-debt", "refactoring", "chore"]
-        weight: 0.15
-    penalize:
-      large-diff:
-        threshold: 500
-        weight: 0.2
-      no-description:
-        weight: 0.3
-      touches-config:
-        weight: 0.1
-```
-
-## GUI — widoki (React)
-
-### Faza 1 — MVP
-
-**DashboardPage (`/`)**
-- AnalysisForm: wybor providera, project slug, branch, zakres dat, limit
-- Przycisk "Analizuj"
-- MrTable: #, tytul, autor, score, verdict, link
-- Kolorowanie wierszy: zielony (automatable), zolty (maybe), czerwony (not suitable)
-- SummaryCard: liczba MR w kazdej kategorii
-
-**MrDetailPage (`/mr/:id`)**
-- Pelne dane MR
-- Score breakdown — ktore reguly zadzialaly i z jakim efektem
-- Komentarz LLM (jesli wlaczony)
-
-### Faza 2 — Rozszerzenie
-
-- Wykresy (Chart.js / react-chartjs-2): rozklad score, trend w czasie, top autorzy
-- Filtrowanie: po autorze, repo, dacie, verdict
-- Wyszukiwarka MR
-- Porownanie repozytoriow
-- Historia analiz
-
-### Faza 3 — Zaawansowane
-
-- Dashboard z widgetami (statystyki per zespol/osoba)
-- Eksport do CSV/PDF
-- Tryb CI — webhook, automatyczna analiza nowych MR
-- Konfiguracja regul przez GUI
+Konfiguracja regul w `application.yml` (exclude labels, min/max files, file extensions, boost keywords, penalize large diff itp.)
 
 ## Porty aplikacji
 
 - **Backend**: 8083 (Spring Boot REST API)
 - **Frontend dev**: 3000 (Vite dev server, proxy do 8083)
-- **Produkcja**: frontend buildowany do static, serwowany przez backend na 8083
+- **H2 Console**: 8083/h2-console
 
-## Fazy realizacji
+## Testy
 
-### Faza 1 — MVP
-- [ ] Inicjalizacja projektu Spring Boot (Maven, Java 17) — backend/
-- [ ] Inicjalizacja React + TypeScript (Vite) — frontend/
-- [ ] Model domenowy (MergeRequest, AnalysisResult, reguly)
-- [ ] Port MergeRequestProvider + adapter GitHub
-- [ ] Silnik regul i scoring
-- [ ] Port LlmAnalyzer + adapter Claude CLI
-- [ ] Adapter NoOp LLM (analiza tylko regulami)
-- [ ] Persystencja H2 + JPA
-- [ ] REST API (endpointy analizy)
-- [ ] Frontend: DashboardPage + AnalysisForm + MrTable + MrDetailPage
-- [ ] Konfiguracja przez application.yml
-- [ ] Testy BDD (Cucumber .feature files)
-- [ ] Testy jednostkowe (domain, rules, scoring)
+- **85 testow, 0 failures**
+- 28 scenariuszy BDD (Cucumber/Gherkin) w 5 plikach .feature
+- 57 testow jednostkowych i integracyjnych (JUnit 5 + Mockito)
+- Testy integracyjne: Spring Boot + H2 + MockBean provider
 
-### Faza 2 — Rozszerzenie
-- [ ] Adapter GitLab
-- [ ] Wykresy i statystyki (Chart.js)
-- [ ] Filtrowanie i wyszukiwanie (po autorze, repo, dacie)
-- [ ] Historia analiz z porownywaniem
-- [ ] Cache wynikow API
+## Zrealizowane features
 
-### Faza 3 — Zaawansowane
-- [ ] Analiza tresci diffa heurystykami (bez LLM)
-- [ ] Adapter LLM przez API (Claude API, OpenAI API)
-- [ ] Konfiguracja regul przez GUI
-- [ ] Eksport CSV/PDF
-- [ ] Tryb CI / webhook
+### 001-mvp-core (DONE)
+- Model domenowy, silnik regul, scoring
+- Adapter GitHub (WebClient, paginacja, rate limit)
+- Adapter Claude CLI + NoOp
+- REST API (5 endpointow)
+- React dashboard z formularzem i tabela wynikow
+- Persystencja H2 (JPA)
+- 60 testow (18 BDD + 42 unit/integration)
+
+### 002-mr-browse-analyze (DONE)
+- Dwuetapowy flow: browse MR → analyze
+- Dropdown zapisanych repozytoriow (CRUD)
+- Cache analiz + usuwanie
+- Selekcja MR checkboxami przed analiza
+- MrBrowseTable (lista MR bez scoringu)
+- AnalysisHistory (historia analiz z usuwaniem)
+- 25 nowych testow (10 BDD + 15 unit/integration)
 
 ## Uwagi
 
-- Tokeny API wylacznie przez zmienne srodowiskowe
+- Tokeny API wylacznie przez zmienne srodowiskowe (`export GITHUB_TOKEN=...`)
 - Rate limiting — respektowanie limitow API providerow
-- Paginacja — automatyczne pobieranie wszystkich stron
-- Claude CLI adapter: `claude -p "prompt"` — timeout 60s, parsowanie stdout
-- Hexagonalna architektura umozliwia latwe dodanie nowego providera lub LLM bez zmian w logice
-- CORS skonfigurowany w CorsConfig dla dev (localhost:3000 → localhost:8083)
+- Paginacja — automatyczne pobieranie wszystkich stron (Link header)
+- Claude CLI adapter: `claude -p "prompt"` — timeout 60s, fallback na NoOp
+- H2 file-based (`./data/mranalizer`) — dane przetrwaja restart
+- Hexagonalna architektura: domain (0 deps) → ports → adapters (Spring, JPA, WebClient)
+- CORS skonfigurowany dla dev (localhost:3000 → localhost:8083)

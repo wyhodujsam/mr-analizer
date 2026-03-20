@@ -1,9 +1,10 @@
-import { Table, Badge } from 'react-bootstrap';
+import { Table, Badge, Form } from 'react-bootstrap';
 import type { MrBrowseItem } from '../types';
 
 interface Props {
   items: MrBrowseItem[];
-  reportId?: number;
+  selectedIds: Set<string>;
+  onSelectionChange: (selectedIds: Set<string>) => void;
 }
 
 function formatDate(iso: string | null): string {
@@ -25,21 +26,45 @@ function stateVariant(state: string): string {
   }
 }
 
-export default function MrBrowseTable({ items, reportId }: Props) {
-  function handleRowClick(item: MrBrowseItem) {
-    if (reportId) {
-      // If analysis exists, we don't have resultId mapping for browse items,
-      // so open the original URL
-      window.open(item.url, '_blank', 'noopener,noreferrer');
+export default function MrBrowseTable({ items, selectedIds, onSelectionChange }: Props) {
+  const allSelected = items.length > 0 && items.every(i => selectedIds.has(i.externalId));
+
+  function toggleAll() {
+    if (allSelected) {
+      onSelectionChange(new Set());
     } else {
-      window.open(item.url, '_blank', 'noopener,noreferrer');
+      onSelectionChange(new Set(items.map(i => i.externalId)));
     }
+  }
+
+  function toggleOne(id: string) {
+    const next = new Set(selectedIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    onSelectionChange(next);
+  }
+
+  function handleRowClick(e: React.MouseEvent, item: MrBrowseItem) {
+    // Don't open link if clicking checkbox
+    if ((e.target as HTMLElement).closest('input[type="checkbox"]')) return;
+    window.open(item.url, '_blank', 'noopener,noreferrer');
   }
 
   return (
     <Table hover bordered responsive className="mr-browse-table">
       <thead className="table-dark">
         <tr>
+          <th style={{ width: 40 }}>
+            <Form.Check
+              type="checkbox"
+              checked={allSelected}
+              onChange={toggleAll}
+              aria-label="Zaznacz wszystkie"
+            />
+          </th>
           <th>#</th>
           <th>Tytul</th>
           <th>Autor</th>
@@ -53,10 +78,18 @@ export default function MrBrowseTable({ items, reportId }: Props) {
         {items.map((item) => (
           <tr
             key={item.externalId}
-            className="clickable-row"
-            onClick={() => handleRowClick(item)}
+            className={`clickable-row ${selectedIds.has(item.externalId) ? 'table-active' : ''}`}
+            onClick={(e) => handleRowClick(e, item)}
             style={{ cursor: 'pointer' }}
           >
+            <td onClick={(e) => e.stopPropagation()}>
+              <Form.Check
+                type="checkbox"
+                checked={selectedIds.has(item.externalId)}
+                onChange={() => toggleOne(item.externalId)}
+                aria-label={`Zaznacz MR #${item.externalId}`}
+              />
+            </td>
             <td>{item.externalId}</td>
             <td>{item.title}</td>
             <td>{item.author}</td>

@@ -44,7 +44,7 @@ public class AnalysisRestController {
                 .limit(request.limit())
                 .build();
 
-        AnalysisReport report = analyzeMrUseCase.analyze(criteria, request.useLlm());
+        AnalysisReport report = analyzeMrUseCase.analyze(criteria, request.useLlm(), request.selectedMrIds());
         return ResponseEntity.ok(AnalysisResponse.from(report));
     }
 

@@ -48,7 +48,7 @@ public class AnalysisCacheSteps {
                 .state("merged")
                 .limit(100)
                 .build();
-        secondReport = analyzeMrUseCase.analyze(criteria, false);
+        secondReport = analyzeMrUseCase.analyze(criteria, false, List.of());
     }
 
     @When("I delete the analysis for {string}")
@@ -106,5 +106,38 @@ public class AnalysisCacheSteps {
         AnalysisReport report = scenarioContext.getLastAnalysisReport();
         assertNotNull(report, "Report should exist");
         assertEquals(expectedCount, report.getTotalMrs());
+    }
+
+    @When("I trigger analysis for {string} with selected MR ids {string}")
+    public void triggerAnalysisWithSelectedIds(String slug, String idsStr) {
+        List<String> selectedIds = List.of(idsStr.split(","));
+        FetchCriteria criteria = FetchCriteria.builder()
+                .projectSlug(slug)
+                .targetBranch("main")
+                .state("merged")
+                .limit(100)
+                .build();
+        AnalysisReport report = analyzeMrUseCase.analyze(criteria, false, selectedIds);
+        scenarioContext.setLastAnalysisReport(report);
+    }
+
+    @Then("the selected analysis report should contain {int} results")
+    public void selectedReportShouldContainResults(int count) {
+        AnalysisReport report = scenarioContext.getLastAnalysisReport();
+        assertNotNull(report);
+        assertEquals(count, report.getResults().size());
+    }
+
+    @Then("the selected results should only include MR ids {string}")
+    public void resultsShouldOnlyIncludeIds(String idsStr) {
+        List<String> expectedIds = List.of(idsStr.split(","));
+        AnalysisReport report = scenarioContext.getLastAnalysisReport();
+        assertNotNull(report);
+        List<String> actualIds = report.getResults().stream()
+                .map(r -> r.getMergeRequest().getExternalId())
+                .toList();
+        assertEquals(expectedIds.size(), actualIds.size());
+        assertTrue(actualIds.containsAll(expectedIds),
+                "Expected MR ids " + expectedIds + " but got " + actualIds);
     }
 }

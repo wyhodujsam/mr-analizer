@@ -76,7 +76,7 @@ class AnalyzeMrServiceTest {
         when(provider.getProviderName()).thenReturn("github");
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        service.analyze(criteria, false);
+        service.analyze(criteria, false, List.of());
 
         ArgumentCaptor<FetchCriteria> captor = ArgumentCaptor.forClass(FetchCriteria.class);
         verify(provider).fetchMergeRequests(captor.capture());
@@ -103,7 +103,7 @@ class AnalyzeMrServiceTest {
         when(provider.getProviderName()).thenReturn("github");
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        AnalysisReport report = service.analyze(criteria, false);
+        AnalysisReport report = service.analyze(criteria, false, List.of());
 
         assertThat(report.getTotalMrs()).isEqualTo(3);
         assertThat(report.getResults()).hasSize(3);
@@ -119,7 +119,7 @@ class AnalyzeMrServiceTest {
         when(provider.getProviderName()).thenReturn("github");
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        service.analyze(criteria, false);
+        service.analyze(criteria, false, List.of());
 
         ArgumentCaptor<AnalysisReport> captor = ArgumentCaptor.forClass(AnalysisReport.class);
         verify(repository).save(captor.capture());
@@ -146,7 +146,7 @@ class AnalyzeMrServiceTest {
         when(llmAnalyzer.analyze(any())).thenReturn(new LlmAssessment(0.1, "looks good", "test-llm"));
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        service.analyze(criteria, true);
+        service.analyze(criteria, true, List.of());
 
         verify(llmAnalyzer, times(2)).analyze(any(MergeRequest.class));
     }
@@ -161,7 +161,7 @@ class AnalyzeMrServiceTest {
         when(provider.getProviderName()).thenReturn("github");
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        service.analyze(criteria, false);
+        service.analyze(criteria, false, List.of());
 
         verify(llmAnalyzer, never()).analyze(any(MergeRequest.class));
     }
@@ -177,7 +177,7 @@ class AnalyzeMrServiceTest {
         when(llmAnalyzer.analyze(any())).thenThrow(new RuntimeException("LLM service down"));
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        AnalysisReport report = service.analyze(criteria, true);
+        AnalysisReport report = service.analyze(criteria, true, List.of());
 
         assertThat(report.getResults()).hasSize(1);
         AnalysisResult result = report.getResults().get(0);
@@ -233,7 +233,7 @@ class AnalyzeMrServiceTest {
                 99L, "owner/repo", "github", LocalDateTime.now(), List.of());
         when(repository.findByProjectSlug("owner/repo")).thenReturn(Optional.of(cached));
 
-        AnalysisReport result = service.analyze(criteria, false);
+        AnalysisReport result = service.analyze(criteria, false, List.of());
 
         assertThat(result.getId()).isEqualTo(99L);
         verify(provider, never()).fetchMergeRequests(any());
@@ -251,7 +251,7 @@ class AnalyzeMrServiceTest {
         when(provider.getProviderName()).thenReturn("github");
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        AnalysisReport result = service.analyze(criteria, false);
+        AnalysisReport result = service.analyze(criteria, false, List.of());
 
         assertThat(result.getResults()).hasSize(1);
         verify(provider).fetchMergeRequests(any());
