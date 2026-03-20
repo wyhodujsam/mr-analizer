@@ -1,0 +1,65 @@
+# MR Analizer Constitution
+
+## Core Principles
+
+### I. Hexagonal Architecture (MUST)
+
+Application MUST follow hexagonal (ports & adapters) architecture with strict dependency rules:
+- **Domain** (core): Pure business logic, zero framework dependencies. Domain MUST NOT import Spring, JPA, or any adapter code.
+- **Ports**: Interfaces defined in domain that adapters implement. Inbound ports (use cases) and outbound ports (SPI).
+- **Adapters**: Implementations of ports — web controllers, persistence, external API clients, LLM connectors.
+- **Dependency direction**: Adapters depend on domain, NEVER the reverse.
+- Package structure: `domain/`, `application/`, `adapter/in/`, `adapter/out/`, `adapter/config/`
+
+### II. Provider Abstraction (MUST)
+
+All external data sources (GitHub, GitLab) and LLM connectors MUST be accessed through port interfaces.
+- `MergeRequestProvider` port for VCS providers — swappable without touching domain logic.
+- `LlmAnalyzer` port for LLM integrations — swappable without touching domain logic.
+- Adding a new provider or LLM MUST NOT require changes to domain or application layers.
+- Configuration selects active adapter at runtime via `application.yml`.
+
+### III. BDD Testing (MUST)
+
+Acceptance tests MUST be written as Cucumber scenarios in Gherkin format.
+- `.feature` files in `src/test/resources/features/`
+- Step definitions in `src/test/java/com/mranalizer/bdd/steps/`
+- Scenarios MUST map to user stories from spec.md acceptance criteria.
+- New features MUST have corresponding .feature files before implementation.
+- Unit tests (JUnit 5 + Mockito) for domain logic remain mandatory alongside BDD tests.
+
+### IV. SDD Workflow (MUST)
+
+All features MUST follow the Spec Kit workflow:
+- Specify → Plan → Tasks → Analyze → Implement
+- Feature branches: `###-feature-name`
+- Artifacts in `specs/###-feature-name/`
+- No implementation without spec.md and plan.md
+- Constitution compliance checked at every planning gate.
+
+### V. Simplicity (YAGNI)
+
+- No premature abstractions — three similar lines better than early refactoring.
+- Only refactor when duplication becomes maintenance burden.
+- No features beyond current phase scope.
+- Prefer Spring Boot conventions and auto-configuration.
+- Start simple, evolve incrementally.
+
+## Technology Stack
+
+- **Backend**: Java 17 + Spring Boot 3.x (Web, Validation, Data JPA, WebFlux client)
+- **Frontend**: React 18 + TypeScript + Vite + Bootstrap 5 (React-Bootstrap)
+- **Build**: Maven (backend), npm (frontend)
+- **Database**: H2 (dev/test), PostgreSQL (prod option)
+- **Testing**: JUnit 5, Mockito, Cucumber 7, Spring Test
+- **Ports**: 8083 (backend), 3000 (frontend dev)
+- **Packaging**: JAR (backend, embedded Tomcat) — produkcja: frontend build serwowany przez backend
+
+## Governance
+
+- Constitution supersedes all other practices.
+- Amendments require documentation, version bump, and migration plan.
+- All spec reviews must verify compliance with hexagonal architecture and BDD principles.
+- Complexity beyond constitution principles must be justified in plan.md Complexity Tracking table.
+
+**Version**: 1.0.0 | **Ratified**: 2026-03-20 | **Last Amended**: 2026-03-20
