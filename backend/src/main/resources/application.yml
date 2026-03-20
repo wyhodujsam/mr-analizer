@@ -1,0 +1,75 @@
+server:
+  port: 8083
+
+mr-analizer:
+  provider: github
+  github:
+    token: ${GITHUB_TOKEN:}
+    api-url: https://api.github.com
+
+  llm:
+    adapter: none
+    claude-cli:
+      command: claude
+      timeout-seconds: 60
+
+  scoring:
+    base-score: 0.5
+    automatable-threshold: 0.7
+    maybe-threshold: 0.4
+
+  rules:
+    exclude:
+      min-changed-files: 2
+      max-changed-files: 50
+      file-extensions-only:
+        - ".env"
+        - ".yml"
+        - ".toml"
+        - ".lock"
+      labels:
+        - "hotfix"
+        - "security"
+        - "emergency"
+    boost:
+      description-keywords:
+        words:
+          - "refactor"
+          - "cleanup"
+          - "add test"
+          - "rename"
+        weight: 0.2
+      has-tests:
+        weight: 0.15
+      changed-files-range:
+        min: 3
+        max: 15
+        weight: 0.1
+      labels:
+        values:
+          - "tech-debt"
+          - "refactoring"
+          - "chore"
+        weight: 0.15
+    penalize:
+      large-diff:
+        threshold: 500
+        weight: 0.2
+      no-description:
+        weight: 0.3
+      touches-config:
+        weight: 0.1
+
+spring:
+  datasource:
+    url: jdbc:h2:file:./data/mranalizer
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+  h2:
+    console:
+      enabled: true

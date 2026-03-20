@@ -36,6 +36,9 @@ node_modules/
 dist/
 .vite/
 
+# Claude Code local settings
+.claude/settings.local.json
+
 # Environment
 .env
 .env.local

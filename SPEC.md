@@ -20,8 +20,29 @@ Artefakty w `specs/###-feature-name/`: spec.md, plan.md, tasks.md, research.md, 
 
 ### BDD — Behavior Driven Development
 
-Testy akceptacyjne w Cucumber (Gherkin `.feature` files) weryfikuja scenariusze z user stories.
-Struktura:
+BDD (Behavior-Driven Development) to podejscie test-first, w ktorym testy opisuja **zachowanie systemu z perspektywy uzytkownika**, a nie wewnetrzna implementacje. BDD jest synteza i udoskonaleniem praktyk wywodzacych sie z TDD (Test-Driven Development) i ATDD (Acceptance-Test-Driven Development).
+
+**Kluczowe zasady BDD w projekcie:**
+
+1. **Scenariusze biznesowe, nie techniczne** — kazdy scenariusz opisuje story/feature/capability z punktu widzenia uzytkownika, unikajac szczegolow implementacyjnych
+2. **Test-first** — scenariusze .feature pisane PRZED implementacja, na podstawie acceptance criteria z user stories (spec.md)
+3. **Zrozumiale dla nietechnicznych** — scenariusze w formacie Given/When/Then sa czytelne dla kazdego interesariusza
+4. **Zywadokumentacja** — pliki .feature sluza jednoczesnie jako testy akceptacyjne i dokumentacja zachowan systemu
+5. **Mapowanie na user stories** — kazda user story z spec.md ma odpowiadajace scenariusze .feature
+
+**Workflow BDD:**
+
+```
+User Story (spec.md)
+  → Acceptance Scenarios (Given/When/Then)
+    → .feature file (Gherkin)
+      → Step definitions (Java)
+        → Scenariusze FAIL (red)
+          → Implementacja feature'a
+            → Scenariusze PASS (green)
+```
+
+**Struktura plikow:**
 
 ```
 backend/src/test/resources/features/          # pliki .feature (Gherkin)

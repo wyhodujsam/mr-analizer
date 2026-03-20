@@ -21,11 +21,16 @@ All external data sources (GitHub, GitLab) and LLM connectors MUST be accessed t
 
 ### III. BDD Testing (MUST)
 
-Acceptance tests MUST be written as Cucumber scenarios in Gherkin format.
-- `.feature` files in `src/test/resources/features/`
-- Step definitions in `src/test/java/com/mranalizer/bdd/steps/`
-- Scenarios MUST map to user stories from spec.md acceptance criteria.
-- New features MUST have corresponding .feature files before implementation.
+BDD (Behavior-Driven Development) is a test-first, agile testing practice. Scenarios describe behavior from the user's perspective, not internal implementation. BDD is a synthesis and refinement of TDD and ATDD practices.
+
+- Acceptance tests MUST be written as Cucumber scenarios in Gherkin format (Given/When/Then).
+- `.feature` files in `backend/src/test/resources/features/`
+- Step definitions in `backend/src/test/java/com/mranalizer/bdd/steps/`
+- Scenarios MUST be business-facing — describing behavior of a story/feature/capability from user perspective.
+- Scenarios MUST map to user stories and acceptance criteria from spec.md.
+- Scenarios MUST NOT contain implementation details (no class names, SQL, HTTP codes in scenario text).
+- New features MUST have corresponding .feature files BEFORE implementation (test-first).
+- `.feature` files serve as living documentation of system behavior.
 - Unit tests (JUnit 5 + Mockito) for domain logic remain mandatory alongside BDD tests.
 
 ### IV. SDD Workflow (MUST)
