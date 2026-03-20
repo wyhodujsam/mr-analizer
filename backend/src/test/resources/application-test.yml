@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:test
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+mr-analizer:
+  provider: github
+  github:
+    token: test-token
+    api-url: http://localhost:${wiremock.server.port:8089}
+  llm:
+    adapter: none
+  scoring:
+    base-score: 0.5
+    automatable-threshold: 0.7
+    maybe-threshold: 0.4

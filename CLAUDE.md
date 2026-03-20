@@ -3,6 +3,8 @@
 Auto-generated from all feature plans. Last updated: 2026-03-20
 
 ## Active Technologies
+- Java 17 (backend), TypeScript 5.x (frontend) + Spring Boot 3.x (Web, Data JPA, Validation, WebFlux client), React 18, Vite, React-Bootstrap, Axios, React Router, Lombok (001-mvp-core)
+- H2 (dev/test), Spring Data JPA (001-mvp-core)
 
 - Java 17 + Spring Boot 3.x (Web, Data JPA, WebFlux client) — backend
 - React 18 + TypeScript + Vite — frontend
@@ -22,6 +24,14 @@ specs/                                # SDD feature specs
 ## Architecture
 
 Hexagonal (ports & adapters) backend + React SPA frontend. See `.specify/memory/constitution.md` for rules.
+
+## Testing Approach — BDD
+
+BDD (Behavior-Driven Development) — test-first, scenarios describe system behavior from user perspective.
+- Write `.feature` files (Gherkin) BEFORE implementation
+- Scenarios map to user stories from spec.md
+- Business-facing language, no implementation details in scenarios
+- Unit tests (JUnit 5 + Mockito) complement BDD for domain logic
 
 ## Commands
 
@@ -43,6 +53,7 @@ cd frontend && npm run build          # production build
 - TypeScript: Strict mode. Functional components with hooks.
 
 ## Recent Changes
+- 001-mvp-core: Added Java 17 (backend), TypeScript 5.x (frontend) + Spring Boot 3.x (Web, Data JPA, Validation, WebFlux client), React 18, Vite, React-Bootstrap, Axios, React Router, Lombok
 
 - Initial project setup
 

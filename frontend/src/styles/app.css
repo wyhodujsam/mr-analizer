@@ -1,0 +1,57 @@
+/* Verdict row background colors */
+.verdict-automatable {
+  background-color: rgba(25, 135, 84, 0.1);
+}
+
+.verdict-maybe {
+  background-color: rgba(255, 193, 7, 0.1);
+}
+
+.verdict-not-suitable {
+  background-color: rgba(220, 53, 69, 0.1);
+}
+
+/* Table hover enhancements */
+.mr-table tbody tr:hover.verdict-automatable {
+  background-color: rgba(25, 135, 84, 0.2);
+}
+
+.mr-table tbody tr:hover.verdict-maybe {
+  background-color: rgba(255, 193, 7, 0.2);
+}
+
+.mr-table tbody tr:hover.verdict-not-suitable {
+  background-color: rgba(220, 53, 69, 0.2);
+}
+
+/* Clickable row cursor */
+.clickable-row {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+  .display-6 {
+    font-size: 1.5rem;
+  }
+
+  .mr-table {
+    font-size: 0.875rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+  }
+
+  h3 {
+    font-size: 1.25rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .container {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
