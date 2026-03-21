@@ -12,6 +12,23 @@ mr-analizer:
     claude-cli:
       command: claude
       timeout-seconds: 60
+      prompt-template: |
+        Analyze this Pull Request for LLM automation potential.
+        Rate from -0.5 to +0.5 how suitable it is for automated execution.
+        Respond in JSON: {"scoreAdjustment": 0.1, "comment": "explanation"}
+
+        Title: {{title}}
+        Description: {{description}}
+        Files changed: {{filesChanged}}
+        Additions: {{additions}}
+        Deletions: {{deletions}}
+        Has tests: {{hasTests}}
+        Labels: {{labels}}
+        Author: {{author}}
+        Source branch: {{sourceBranch}}
+        Target branch: {{targetBranch}}
+      response-score-field: scoreAdjustment
+      response-comment-field: comment
 
   scoring:
     base-score: 0.5

@@ -20,12 +20,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 class AnalyzeMrServiceTest {
@@ -57,9 +55,6 @@ class AnalyzeMrServiceTest {
                 BoostRule.byHasTests(0.15),
                 PenalizeRule.byNoDescription(-0.3)
         );
-
-        // Default: no cached analysis (cache miss)
-        lenient().when(repository.findByProjectSlug(any())).thenReturn(Optional.empty());
 
         service = new AnalyzeMrService(provider, llmAnalyzer, repository, scoringEngine, rules, manageReposUseCase);
     }
@@ -185,42 +180,27 @@ class AnalyzeMrServiceTest {
     }
 
     // -------------------------------------------------------------------------
-    // Cache & delete tests (feature 002-mr-browse-analyze)
+    // No-cache tests (feature 004 — remove cache-per-repo)
     // -------------------------------------------------------------------------
 
     @Test
-    void analyze_returnsCachedWhenExists() {
+    void analyze_createsNewReportEvenWhenExistingExists() {
         FetchCriteria criteria = FetchCriteria.builder()
                 .projectSlug("owner/repo")
                 .state("merged")
                 .build();
 
-        AnalysisReport cached = AnalysisReport.of(
-                99L, "owner/repo", "github", LocalDateTime.now(), List.of());
-        when(repository.findByProjectSlug("owner/repo")).thenReturn(Optional.of(cached));
-
-        AnalysisReport result = service.analyze(criteria, false, List.of());
-
-        assertThat(result.getId()).isEqualTo(99L);
-        verify(provider, never()).fetchMergeRequests(any());
-    }
-
-    @Test
-    void analyze_calculatesWhenNoCache() {
-        FetchCriteria criteria = FetchCriteria.builder()
-                .projectSlug("owner/repo")
-                .state("merged")
-                .build();
-
-        when(repository.findByProjectSlug("owner/repo")).thenReturn(Optional.empty());
         when(provider.fetchMergeRequests(any())).thenReturn(List.of(buildMr(1L, "MR 1", "desc", 5)));
         when(provider.getProviderName()).thenReturn("github");
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        AnalysisReport result = service.analyze(criteria, false, List.of());
+        // First analysis
+        service.analyze(criteria, false, List.of());
+        // Second analysis — provider should be called again (no cache)
+        service.analyze(criteria, false, List.of());
 
-        assertThat(result.getResults()).hasSize(1);
-        verify(provider).fetchMergeRequests(any());
+        verify(provider, times(2)).fetchMergeRequests(any());
+        verify(repository, times(2)).save(any());
     }
 
     @Test

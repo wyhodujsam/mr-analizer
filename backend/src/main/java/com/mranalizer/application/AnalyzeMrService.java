@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class AnalyzeMrService implements AnalyzeMrUseCase {
@@ -44,11 +43,6 @@ public class AnalyzeMrService implements AnalyzeMrUseCase {
     public AnalysisReport analyze(FetchCriteria criteria, boolean useLlm, List<String> selectedMrIds) {
         if (criteria.getProjectSlug() == null || criteria.getProjectSlug().isBlank()) {
             throw new InvalidRequestException("projectSlug is required");
-        }
-
-        Optional<AnalysisReport> cached = repository.findByProjectSlug(criteria.getProjectSlug());
-        if (cached.isPresent()) {
-            return cached.get();
         }
 
         List<MergeRequest> mergeRequests = provider.fetchMergeRequests(criteria);

@@ -234,7 +234,7 @@ class IntegrationTest {
     }
 
     @Test
-    void cachedAnalysis_returnsInstantly() {
+    void multipleAnalyses_sameRepo_coexist() {
         setupMockProvider(2);
 
         AnalysisRequestDto request = new AnalysisRequestDto(
@@ -246,14 +246,14 @@ class IntegrationTest {
         assertThat(first.getStatusCode()).isEqualTo(HttpStatus.OK);
         Long firstReportId = first.getBody().reportId();
 
-        // Second analysis — should return cached
+        // Second analysis — should create a new report
         ResponseEntity<AnalysisResponse> second = restTemplate.postForEntity(
                 "/api/analysis", request, AnalysisResponse.class);
         assertThat(second.getStatusCode()).isEqualTo(HttpStatus.OK);
         Long secondReportId = second.getBody().reportId();
 
-        // Same report ID means cache was used
-        assertThat(secondReportId).isEqualTo(firstReportId);
+        // Different report IDs — no cache, both coexist
+        assertThat(secondReportId).isNotEqualTo(firstReportId);
     }
 
     // -------------------------------------------------------------------------

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mranalizer.domain.model.LlmAssessment;
 import com.mranalizer.domain.model.MergeRequest;
 import com.mranalizer.domain.port.out.LlmAnalyzer;
+import com.mranalizer.domain.scoring.PromptBuilder;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,7 +14,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Component
@@ -26,14 +26,25 @@ public class ClaudeCliAdapter implements LlmAnalyzer {
     private final String command;
     private final int timeoutSeconds;
     private final ObjectMapper objectMapper;
+    private final PromptBuilder promptBuilder;
+    private final String promptTemplate;
+    private final String responseScoreField;
+    private final String responseCommentField;
 
     public ClaudeCliAdapter(
             @Value("${mr-analizer.llm.claude-cli.command:claude}") String command,
             @Value("${mr-analizer.llm.claude-cli.timeout-seconds:60}") int timeoutSeconds,
+            @Value("${mr-analizer.llm.claude-cli.prompt-template:}") String promptTemplate,
+            @Value("${mr-analizer.llm.claude-cli.response-score-field:scoreAdjustment}") String responseScoreField,
+            @Value("${mr-analizer.llm.claude-cli.response-comment-field:comment}") String responseCommentField,
             ObjectMapper objectMapper) {
         this.command = command;
         this.timeoutSeconds = timeoutSeconds;
+        this.promptTemplate = promptTemplate;
+        this.responseScoreField = responseScoreField;
+        this.responseCommentField = responseCommentField;
         this.objectMapper = objectMapper;
+        this.promptBuilder = new PromptBuilder();
     }
 
     @PostConstruct
@@ -58,7 +69,7 @@ public class ClaudeCliAdapter implements LlmAnalyzer {
 
     @Override
     public LlmAssessment analyze(MergeRequest mr) {
-        String prompt = buildPrompt(mr);
+        String prompt = promptBuilder.build(promptTemplate, mr);
 
         try {
             Process process = new ProcessBuilder(command, "-p", prompt, "--output-format", "json")
@@ -95,25 +106,6 @@ public class ClaudeCliAdapter implements LlmAnalyzer {
         return PROVIDER;
     }
 
-    private String buildPrompt(MergeRequest mr) {
-        List<String> labels = mr.getLabels();
-        String labelsStr = (labels != null && !labels.isEmpty()) ? String.join(", ", labels) : "none";
-        int additions = mr.getDiffStats() != null ? mr.getDiffStats().additions() : 0;
-        int deletions = mr.getDiffStats() != null ? mr.getDiffStats().deletions() : 0;
-        int filesChanged = mr.getDiffStats() != null ? mr.getDiffStats().changedFilesCount() : 0;
-
-        return "Analyze this Pull Request for LLM automation potential. " +
-                "Rate from -0.5 to +0.5 how suitable it is for automated execution. " +
-                "Respond in JSON: {\"scoreAdjustment\": 0.1, \"comment\": \"explanation\"}\n\n" +
-                "Title: " + mr.getTitle() + "\n" +
-                "Description: " + (mr.getDescription() != null ? mr.getDescription() : "none") + "\n" +
-                "Files changed: " + filesChanged + "\n" +
-                "Additions: " + additions + "\n" +
-                "Deletions: " + deletions + "\n" +
-                "Has tests: " + mr.isHasTests() + "\n" +
-                "Labels: " + labelsStr;
-    }
-
     private LlmAssessment parseResponse(String rawOutput) {
         try {
             // Claude --output-format json wraps the result; extract the text content
@@ -132,8 +124,8 @@ public class ClaudeCliAdapter implements LlmAnalyzer {
                 String jsonStr = text.substring(braceStart, braceEnd + 1);
                 JsonNode parsed = objectMapper.readTree(jsonStr);
 
-                double score = parsed.has("scoreAdjustment") ? parsed.get("scoreAdjustment").asDouble(0.0) : 0.0;
-                String comment = parsed.has("comment") ? parsed.get("comment").asText() : null;
+                double score = parsed.has(responseScoreField) ? parsed.get(responseScoreField).asDouble(0.0) : 0.0;
+                String comment = parsed.has(responseCommentField) ? parsed.get(responseCommentField).asText() : null;
 
                 // Clamp score to valid range
                 score = Math.max(-0.5, Math.min(0.5, score));

@@ -65,11 +65,6 @@ public class JpaAnalysisResultRepository implements AnalysisResultRepository {
         springRepo.deleteById(id);
     }
 
-    @Override
-    public Optional<AnalysisReport> findByProjectSlug(String projectSlug) {
-        return springRepo.findByProjectSlug(projectSlug).map(this::toDomain);
-    }
-
     // -------------------------------------------------------------------------
     // Mapping: domain -> entity
     // -------------------------------------------------------------------------

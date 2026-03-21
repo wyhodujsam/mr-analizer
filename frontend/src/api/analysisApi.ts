@@ -65,9 +65,3 @@ export async function deleteAnalysis(reportId: number): Promise<void> {
   await api.delete(`/api/analysis/${reportId}`);
 }
 
-export async function getAnalysisBySlug(projectSlug: string): Promise<AnalysisResponse | null> {
-  const { data } = await api.get<AnalysisResponse[]>('/api/analysis', {
-    params: { projectSlug },
-  });
-  return data.length > 0 ? data[0] : null;
-}
