@@ -3,7 +3,7 @@ package com.mranalizer.bdd.steps;
 import com.mranalizer.domain.model.FetchCriteria;
 import com.mranalizer.domain.model.MergeRequest;
 import com.mranalizer.domain.model.SavedRepository;
-import com.mranalizer.domain.port.in.BrowseMrUseCase;
+import com.mranalizer.application.BrowseMrService;
 import com.mranalizer.domain.port.in.ManageReposUseCase;
 import com.mranalizer.domain.port.out.MergeRequestProvider;
 import io.cucumber.java.Before;
@@ -17,13 +17,12 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class BrowseRepoSteps {
 
     @Autowired
-    private BrowseMrUseCase browseMrUseCase;
+    private BrowseMrService browseMrService;
 
     @Autowired
     private ManageReposUseCase manageReposUseCase;
@@ -38,6 +37,8 @@ public class BrowseRepoSteps {
     public void setUp() {
         browseResult = null;
         savedRepos = null;
+        browseMrService.invalidateCache("owner/repo");
+        browseMrService.invalidateCache("other/repo");
     }
 
     // --- When steps ---
@@ -52,7 +53,7 @@ public class BrowseRepoSteps {
                 .state("merged")
                 .limit(100)
                 .build();
-        browseResult = browseMrUseCase.browse(criteria);
+        browseResult = browseMrService.browse(criteria);
     }
 
     @When("I browse merge requests for {string} again")
@@ -99,6 +100,28 @@ public class BrowseRepoSteps {
         assertTrue(repos.stream().anyMatch(r -> slug.equals(r.getProjectSlug())),
                 "Expected saved repos to contain '" + slug + "' but found: "
                         + repos.stream().map(SavedRepository::getProjectSlug).toList());
+    }
+
+    @When("I force refresh browse for {string}")
+    public void forceRefreshBrowseFor(String slug) {
+        when(mergeRequestProvider.getProviderName()).thenReturn("github");
+        FetchCriteria criteria = FetchCriteria.builder()
+                .projectSlug(slug)
+                .targetBranch("main")
+                .state("merged")
+                .limit(100)
+                .build();
+        browseResult = browseMrService.browse(criteria, true);
+    }
+
+    @Then("the provider should have been called only once for browse")
+    public void providerCalledOnceForBrowse() {
+        verify(mergeRequestProvider, times(1)).fetchMergeRequests(any());
+    }
+
+    @Then("the provider should have been called twice for browse")
+    public void providerCalledTwiceForBrowse() {
+        verify(mergeRequestProvider, times(2)).fetchMergeRequests(any());
     }
 
     @Then("the saved repos list should not contain {string}")

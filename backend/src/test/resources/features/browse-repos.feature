@@ -34,3 +34,15 @@ Feature: Browse merge requests and manage saved repositories
     When I browse merge requests for "owner/repo"
     And I browse merge requests for "owner/repo" again
     Then the browse result should contain 4 merge requests
+
+  Scenario: Second browse returns cached results without calling provider
+    Given the repository has 3 merge requests
+    When I browse merge requests for "owner/repo"
+    And I browse merge requests for "owner/repo" again
+    Then the provider should have been called only once for browse
+
+  Scenario: Force refresh bypasses cache and calls provider again
+    Given the repository has 3 merge requests
+    When I browse merge requests for "owner/repo"
+    And I force refresh browse for "owner/repo"
+    Then the provider should have been called twice for browse

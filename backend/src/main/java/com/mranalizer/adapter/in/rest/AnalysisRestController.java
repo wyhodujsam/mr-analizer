@@ -48,17 +48,7 @@ public class AnalysisRestController {
         }
 
         List<AnalysisResponse> response = reports.stream()
-                .map(report -> new AnalysisResponse(
-                        report.getId(),
-                        report.getProjectSlug(),
-                        report.getProvider(),
-                        report.getAnalyzedAt(),
-                        report.getTotalMrs(),
-                        report.getAutomatableCount(),
-                        report.getMaybeCount(),
-                        report.getNotSuitableCount(),
-                        List.of()
-                ))
+                .map(AnalysisResponse::from)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(response);
     }

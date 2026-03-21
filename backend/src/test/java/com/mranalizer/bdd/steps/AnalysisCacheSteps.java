@@ -11,6 +11,7 @@ import io.cucumber.java.en.When;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -141,5 +142,52 @@ public class AnalysisCacheSteps {
         assertEquals(expectedIds.size(), actualIds.size());
         assertTrue(actualIds.containsAll(expectedIds),
                 "Expected MR ids " + expectedIds + " but got " + actualIds);
+    }
+
+    @Then("the analysis history should contain {int} PR entries")
+    public void analysisHistoryShouldContainPrEntries(int expectedCount) {
+        List<AnalysisReport> reports = getAnalysisResultsUseCase.getAllReports();
+        long totalResults = reports.stream()
+                .mapToLong(r -> r.getResults().size())
+                .sum();
+        assertEquals(expectedCount, totalResults,
+                "Expected " + expectedCount + " PR entries but found " + totalResults);
+    }
+
+    @Then("each PR entry should have a title and score")
+    public void eachPrEntryShouldHaveTitleAndScore() {
+        List<AnalysisReport> reports = getAnalysisResultsUseCase.getAllReports();
+        for (AnalysisReport report : reports) {
+            for (var result : report.getResults()) {
+                assertNotNull(result.getMergeRequest().getTitle(),
+                        "PR entry should have a title");
+                assertFalse(result.getMergeRequest().getTitle().isBlank(),
+                        "PR entry title should not be blank");
+                assertTrue(result.getScore() >= 0,
+                        "PR entry should have a score >= 0 but was " + result.getScore());
+            }
+        }
+    }
+
+    @Then("the analysis history should contain reports for {int} different repositories")
+    public void analysisHistoryShouldContainReportsForDifferentRepos(int expectedCount) {
+        List<AnalysisReport> reports = getAnalysisResultsUseCase.getAllReports();
+        long uniqueSlugs = reports.stream()
+                .map(AnalysisReport::getProjectSlug)
+                .distinct()
+                .count();
+        assertEquals(expectedCount, uniqueSlugs,
+                "Expected " + expectedCount + " different repositories but found " + uniqueSlugs);
+    }
+
+    @Then("the analysis history should contain {int} PR entries for {string}")
+    public void analysisHistoryShouldContainPrEntriesForSlug(int expectedCount, String slug) {
+        List<AnalysisReport> reports = getAnalysisResultsUseCase.getAllReports();
+        long totalResults = reports.stream()
+                .filter(r -> slug.equals(r.getProjectSlug()))
+                .mapToLong(r -> r.getResults().size())
+                .sum();
+        assertEquals(expectedCount, totalResults,
+                "Expected " + expectedCount + " PR entries for '" + slug + "' but found " + totalResults);
     }
 }
