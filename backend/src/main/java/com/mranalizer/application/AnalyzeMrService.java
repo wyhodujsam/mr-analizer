@@ -1,13 +1,12 @@
 package com.mranalizer.application;
 
+import com.mranalizer.domain.exception.InvalidRequestException;
 import com.mranalizer.domain.model.*;
 import com.mranalizer.domain.port.in.AnalyzeMrUseCase;
-import com.mranalizer.domain.port.in.GetAnalysisResultsUseCase;
 import com.mranalizer.domain.port.in.ManageReposUseCase;
 import com.mranalizer.domain.port.out.AnalysisResultRepository;
 import com.mranalizer.domain.port.out.LlmAnalyzer;
 import com.mranalizer.domain.port.out.MergeRequestProvider;
-import com.mranalizer.domain.port.out.SavedRepositoryPort;
 import com.mranalizer.domain.rules.Rule;
 import com.mranalizer.domain.scoring.ScoringEngine;
 import org.springframework.stereotype.Service;
@@ -18,7 +17,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-public class AnalyzeMrService implements AnalyzeMrUseCase, GetAnalysisResultsUseCase {
+public class AnalyzeMrService implements AnalyzeMrUseCase {
 
     private final MergeRequestProvider provider;
     private final LlmAnalyzer llmAnalyzer;
@@ -43,7 +42,10 @@ public class AnalyzeMrService implements AnalyzeMrUseCase, GetAnalysisResultsUse
 
     @Override
     public AnalysisReport analyze(FetchCriteria criteria, boolean useLlm, List<String> selectedMrIds) {
-        // Cache detection: if report exists for same slug, return it
+        if (criteria.getProjectSlug() == null || criteria.getProjectSlug().isBlank()) {
+            throw new InvalidRequestException("projectSlug is required");
+        }
+
         Optional<AnalysisReport> cached = repository.findByProjectSlug(criteria.getProjectSlug());
         if (cached.isPresent()) {
             return cached.get();
@@ -51,7 +53,6 @@ public class AnalyzeMrService implements AnalyzeMrUseCase, GetAnalysisResultsUse
 
         List<MergeRequest> mergeRequests = provider.fetchMergeRequests(criteria);
 
-        // Filter by selected MR IDs if provided
         if (selectedMrIds != null && !selectedMrIds.isEmpty()) {
             mergeRequests = mergeRequests.stream()
                     .filter(mr -> selectedMrIds.contains(mr.getExternalId()))
@@ -85,31 +86,13 @@ public class AnalyzeMrService implements AnalyzeMrUseCase, GetAnalysisResultsUse
 
         AnalysisReport saved = repository.save(report);
 
-        // Save repo and update lastAnalyzedAt
         manageReposUseCase.add(criteria.getProjectSlug(), provider.getProviderName());
 
         return saved;
     }
 
+    @Override
     public void deleteAnalysis(Long reportId) {
         repository.deleteById(reportId);
-    }
-
-    @Override
-    public List<AnalysisReport> getAllReports() {
-        return repository.findAll();
-    }
-
-    @Override
-    public Optional<AnalysisReport> getReport(Long reportId) {
-        return repository.findById(reportId);
-    }
-
-    @Override
-    public Optional<AnalysisResult> getResult(Long reportId, Long resultId) {
-        return repository.findById(reportId)
-                .flatMap(report -> report.getResults().stream()
-                        .filter(r -> resultId.equals(r.getId()))
-                        .findFirst());
     }
 }

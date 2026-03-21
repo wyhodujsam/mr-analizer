@@ -97,8 +97,9 @@ public record MrDetailResponse(
 
     private static String findReasonForRule(String rule, List<String> reasons) {
         if (reasons == null || rule == null) return "";
+        String lowerRule = rule.toLowerCase();
         return reasons.stream()
-                .filter(r -> r.toLowerCase().contains(rule.toLowerCase()))
+                .filter(r -> r != null && r.toLowerCase().contains(lowerRule))
                 .findFirst()
                 .orElse("");
     }

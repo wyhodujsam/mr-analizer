@@ -1,5 +1,6 @@
 package com.mranalizer.bdd.steps;
 
+import com.mranalizer.domain.exception.InvalidRequestException;
 import com.mranalizer.domain.model.*;
 import com.mranalizer.domain.port.in.AnalyzeMrUseCase;
 import com.mranalizer.domain.port.out.LlmAnalyzer;
@@ -195,6 +196,32 @@ public class AnalysisSteps {
             assertTrue(r.getLlmComment() == null || r.getLlmComment().isBlank(),
                     "Expected no LLM comment but was: " + r.getLlmComment());
         }
+    }
+
+    @When("I trigger analysis with a blank project slug")
+    public void triggerAnalysisWithBlankSlug() {
+        try {
+            FetchCriteria criteria = FetchCriteria.builder()
+                    .projectSlug("")
+                    .state("merged")
+                    .limit(100)
+                    .build();
+            report = analyzeMrUseCase.analyze(criteria, false, List.of());
+        } catch (Exception e) {
+            caughtException = e;
+        }
+    }
+
+    @Then("the system should return a validation error about project slug")
+    public void systemShouldReturnValidationError() {
+        assertNotNull(caughtException, "Expected a validation exception");
+        assertTrue(caughtException instanceof InvalidRequestException
+                        || caughtException instanceof IllegalArgumentException,
+                "Expected InvalidRequestException or IllegalArgumentException but got: "
+                        + caughtException.getClass().getName());
+        assertTrue(caughtException.getMessage().toLowerCase().contains("projectslug")
+                        || caughtException.getMessage().toLowerCase().contains("project"),
+                "Error message should mention projectSlug, but was: " + caughtException.getMessage());
     }
 
     // --- Helpers ---

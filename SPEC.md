@@ -109,6 +109,12 @@ mr_analizer/
 │       │   │   │   ├── LlmAssessment.java   # record: scoreAdjustment + comment
 │       │   │   │   ├── RuleResult.java      # record: ruleName + matched + weight + reason
 │       │   │   │   └── SavedRepository.java # zapisane repozytorium
+│       │   │   ├── exception/
+│       │   │   │   ├── ProviderException.java          # bazowy wyjatek providera
+│       │   │   │   ├── ProviderRateLimitException.java # rate limit (extends ProviderException)
+│       │   │   │   ├── ProviderAuthException.java      # auth error (extends ProviderException)
+│       │   │   │   ├── ReportNotFoundException.java    # brak raportu/wyniku
+│       │   │   │   └── InvalidRequestException.java    # walidacja inputu
 │       │   │   ├── rules/
 │       │   │   │   ├── Rule.java            # interfejs reguly
 │       │   │   │   ├── ExcludeRule.java     # factory: byLabels, byMinFiles, byMaxFiles, byExtensions
@@ -130,7 +136,8 @@ mr_analizer/
 │       │   │           └── SavedRepositoryPort.java       # port: persystencja repo
 │       │   │
 │       │   ├── application/                 # USE CASES — orkiestracja
-│       │   │   ├── AnalyzeMrService.java    # analiza + cache detection + selekcja MR
+│       │   │   ├── AnalyzeMrService.java    # analiza + cache detection + selekcja MR (implements AnalyzeMrUseCase)
+│       │   │   ├── GetAnalysisResultsService.java  # query: getAll, getReport, getResult (implements GetAnalysisResultsUseCase)
 │       │   │   ├── BrowseMrService.java     # pobieranie MR bez scoringu
 │       │   │   ├── ManageReposService.java  # CRUD saved repos
 │       │   │   └── dto/
@@ -278,9 +285,9 @@ Konfiguracja regul w `application.yml` (exclude labels, min/max files, file exte
 
 ## Testy
 
-- **85 testow, 0 failures**
-- 28 scenariuszy BDD (Cucumber/Gherkin) w 5 plikach .feature
-- 57 testow jednostkowych i integracyjnych (JUnit 5 + Mockito)
+- **89 testow, 0 failures**
+- 29 scenariuszy BDD (Cucumber/Gherkin) w 5 plikach .feature
+- 60 testow jednostkowych i integracyjnych (JUnit 5 + Mockito)
 - Testy integracyjne: Spring Boot + H2 + MockBean provider
 
 ## Zrealizowane features
@@ -302,6 +309,26 @@ Konfiguracja regul w `application.yml` (exclude labels, min/max files, file exte
 - MrBrowseTable (lista MR bez scoringu)
 - AnalysisHistory (historia analiz z usuwaniem)
 - 25 nowych testow (10 BDD + 15 unit/integration)
+
+### 003-cleanup-architecture-robustness (DONE)
+
+Sprint sprzatajacy — architektura i odpornosc (SDD/BDD code review → fix):
+
+**Architektura:**
+- Rozbicie god class: AnalyzeMrService → AnalyzeMrService (command) + GetAnalysisResultsService (query)
+- Domain exceptions: ProviderException/RateLimitException/AuthException, ReportNotFoundException, InvalidRequestException
+- Usuniety adapter-level RateLimitException — wyjatki zyja w domain
+- GlobalExceptionHandler: konkretne handlery per exception typ (zamiast string matching na RuntimeException)
+- DRY: AnalysisRequestDto.toFetchCriteria() zamiast duplikacji w controllerach
+- Controller zalezy od portow (interfejsow), nie od konkretnych serwisow
+
+**Robustnosc:**
+- NPE fix: MrDetailResponse.findReasonForRule() — null check na elementach streama
+- Null safety: ScoringEngine — null llmComment → "no comment"
+- Walidacja: projectSlug required w AnalysisRequestDto + service-level validation
+- HttpMessageNotReadableException handler → 400 zamiast 500
+
+**Testy:** +4 testy (1 BDD scenariusz + 5 unit testow w GetAnalysisResultsServiceTest - 2 przeniesione)
 
 ## Uwagi
 
