@@ -1,17 +1,22 @@
-Feature: Analysis caching and management
+Feature: Analysis management
   As a user
-  I want analysis results to be cached and manageable
-  So that I can avoid redundant analysis runs and re-analyze with updated rules
+  I want each analysis to be independent
+  So that I can compare results across multiple analysis runs
 
   Background:
     Given a repository "owner/repo" with merge requests
     And the repository has 3 merge requests
 
-  Scenario: Analysis results are cached and returned instantly on second request
+  Scenario: Multiple analyses for same repo coexist independently
     When I trigger analysis for "owner/repo"
     And I trigger analysis for "owner/repo" again
-    Then the second analysis should return the cached report
-    And the provider should have been called only once
+    Then the two analyses should have different report IDs
+    And the provider should have been called twice
+
+  Scenario: New analysis does not overwrite previous analysis
+    When I trigger analysis for "owner/repo"
+    And I trigger analysis for "owner/repo" again
+    Then the analysis history should contain 2 reports for "owner/repo"
 
   Scenario: User can delete a cached analysis
     When I trigger analysis for "owner/repo"

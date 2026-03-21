@@ -28,7 +28,4 @@ public interface AnalysisResultRepository {
 
     /** Deletes a report by its ID. */
     void deleteById(Long id);
-
-    /** Returns a report matching the given project slug, or empty if none exists. */
-    Optional<AnalysisReport> findByProjectSlug(String projectSlug);
 }

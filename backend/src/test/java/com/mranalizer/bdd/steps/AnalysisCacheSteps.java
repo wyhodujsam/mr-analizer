@@ -6,7 +6,6 @@ import com.mranalizer.domain.port.in.AnalyzeMrUseCase;
 import com.mranalizer.domain.port.in.GetAnalysisResultsUseCase;
 import com.mranalizer.domain.port.out.MergeRequestProvider;
 import io.cucumber.java.Before;
-import io.cucumber.java.en.And;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,23 +60,26 @@ public class AnalysisCacheSteps {
 
     // --- Then steps ---
 
-    @Then("the second analysis should return the cached report")
-    public void secondAnalysisShouldReturnCachedReport() {
+    @Then("the two analyses should have different report IDs")
+    public void twoAnalysesShouldHaveDifferentReportIds() {
         AnalysisReport firstReport = scenarioContext.getLastAnalysisReport();
         assertNotNull(firstReport, "First report should exist");
         assertNotNull(secondReport, "Second report should exist");
-        assertEquals(firstReport.getId(), secondReport.getId(),
-                "Cached report should have the same ID");
-    }
-
-    @Then("the provider should have been called only once")
-    public void providerShouldHaveBeenCalledOnlyOnce() {
-        verify(mergeRequestProvider, times(1)).fetchMergeRequests(any());
+        assertNotEquals(firstReport.getId(), secondReport.getId(),
+                "Each analysis should produce a new report with a different ID");
     }
 
     @Then("the provider should have been called twice")
     public void providerShouldHaveBeenCalledTwice() {
         verify(mergeRequestProvider, times(2)).fetchMergeRequests(any());
+    }
+
+    @Then("the analysis history should contain {int} reports for {string}")
+    public void analysisHistoryShouldContainNReportsFor(int expectedCount, String slug) {
+        List<AnalysisReport> reports = getAnalysisResultsUseCase.getAllReports();
+        long count = reports.stream().filter(r -> slug.equals(r.getProjectSlug())).count();
+        assertEquals(expectedCount, count,
+                "Expected " + expectedCount + " reports for '" + slug + "' but found " + count);
     }
 
     @Then("the analysis for {string} should not exist")

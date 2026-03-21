@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Alert, Button, Form, Row, Col, Spinner, Badge } from 'react-bootstrap';
+import { Alert, Button, Form, Row, Col, Spinner } from 'react-bootstrap';
 import RepoSelector from '../components/RepoSelector';
 import MrBrowseTable from '../components/MrBrowseTable';
 import SummaryCard from '../components/SummaryCard';
@@ -12,7 +12,6 @@ import {
   browseMrs,
   runAnalysis,
   getAnalyses,
-  getAnalysisBySlug,
   deleteAnalysis,
 } from '../api/analysisApi';
 import type {
@@ -44,9 +43,6 @@ export default function DashboardPage() {
   const [step, setStep] = useState<Step>('select');
   const [browsedMrs, setBrowsedMrs] = useState<MrBrowseItem[]>([]);
   const [analysisResponse, setAnalysisResponse] = useState<AnalysisResponse | null>(null);
-
-  // Cache detection
-  const [cachedAnalysis, setCachedAnalysis] = useState<AnalysisResponse | null>(null);
 
   // History
   const [analysisHistory, setAnalysisHistory] = useState<AnalysisResponse[]>([]);
@@ -86,7 +82,6 @@ export default function DashboardPage() {
     setStep('select');
     setBrowsedMrs([]);
     setAnalysisResponse(null);
-    setCachedAnalysis(null);
 
     // Save to backend if not already saved
     const exists = savedRepos.find(
@@ -99,14 +94,6 @@ export default function DashboardPage() {
       } catch {
         // silently ignore duplicates
       }
-    }
-
-    // Check for cached analysis
-    try {
-      const cached = await getAnalysisBySlug(slug);
-      setCachedAnalysis(cached);
-    } catch {
-      setCachedAnalysis(null);
     }
   }
 
@@ -122,7 +109,6 @@ export default function DashboardPage() {
         setStep('select');
         setBrowsedMrs([]);
         setAnalysisResponse(null);
-        setCachedAnalysis(null);
       }
     } catch {
       setError('Nie udalo sie usunac repozytorium.');
@@ -169,31 +155,11 @@ export default function DashboardPage() {
       const result = await runAnalysis(req);
       setAnalysisResponse(result);
       setStep('analyzed');
-      setCachedAnalysis(result);
       await loadHistory();
     } catch (err: unknown) {
       setError(extractError(err));
     } finally {
       setLoadingAnalyze(false);
-    }
-  }
-
-  async function handleLoadCached() {
-    if (cachedAnalysis) {
-      setAnalysisResponse(cachedAnalysis);
-      setStep('analyzed');
-    }
-  }
-
-  async function handleDeleteCached() {
-    if (!cachedAnalysis) return;
-    if (!window.confirm('Usunac istniejaca analize?')) return;
-    try {
-      await deleteAnalysis(cachedAnalysis.reportId);
-      setCachedAnalysis(null);
-      await loadHistory();
-    } catch {
-      setError('Nie udalo sie usunac analizy.');
     }
   }
 
@@ -205,10 +171,6 @@ export default function DashboardPage() {
       if (analysisResponse?.reportId === reportId) {
         setAnalysisResponse(null);
         setStep(browsedMrs.length > 0 ? 'browse' : 'select');
-      }
-      // Refresh cache detection
-      if (cachedAnalysis?.reportId === reportId) {
-        setCachedAnalysis(null);
       }
     } catch {
       setError('Nie udalo sie usunac analizy.');
@@ -270,23 +232,6 @@ export default function DashboardPage() {
         selectedSlug={selectedSlug}
         selectedProvider={selectedProvider}
       />
-
-      {/* Cache detection badge */}
-      {cachedAnalysis && step !== 'analyzed' && (
-        <Alert variant="info" className="mt-3 cache-badge d-flex align-items-center gap-2">
-          <Badge bg="info">Analiza istnieje</Badge>
-          <span>
-            Znaleziono analize dla <strong>{cachedAnalysis.projectSlug}</strong> z{' '}
-            {new Date(cachedAnalysis.analyzedAt).toLocaleString()}
-          </span>
-          <Button variant="outline-primary" size="sm" onClick={handleLoadCached}>
-            Wczytaj
-          </Button>
-          <Button variant="outline-danger" size="sm" onClick={handleDeleteCached}>
-            Usun i analizuj ponownie
-          </Button>
-        </Alert>
-      )}
 
       {/* Browse form */}
       {selectedSlug && (
