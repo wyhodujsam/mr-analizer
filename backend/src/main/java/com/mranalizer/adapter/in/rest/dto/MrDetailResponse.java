@@ -5,6 +5,8 @@ import com.mranalizer.domain.model.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.mranalizer.domain.model.RuleResult;
+
 public record MrDetailResponse(
         Long resultId,
         String externalId,
@@ -46,9 +48,20 @@ public record MrDetailResponse(
     public static MrDetailResponse from(AnalysisResult result) {
         MergeRequest mr = result.getMergeRequest();
 
-        // Build score breakdown from matched rules and reasons
+        // Build score breakdown from ruleResults (with weight), fallback to matchedRules
         List<ScoreBreakdownEntry> breakdown = List.of();
-        if (result.getMatchedRules() != null) {
+        List<RuleResult> ruleResults = result.getRuleResults();
+        if (ruleResults != null && !ruleResults.isEmpty()) {
+            breakdown = ruleResults.stream()
+                    .map(rr -> new ScoreBreakdownEntry(
+                            rr.ruleName(),
+                            inferType(rr.ruleName()),
+                            rr.weight(),
+                            rr.reason()
+                    ))
+                    .toList();
+        } else if (result.getMatchedRules() != null) {
+            // Fallback for old results without ruleResults
             breakdown = result.getMatchedRules().stream()
                     .map(rule -> new ScoreBreakdownEntry(
                             rule,

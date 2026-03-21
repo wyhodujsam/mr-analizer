@@ -4,6 +4,7 @@ import com.mranalizer.adapter.in.rest.dto.MrBrowseResponse;
 import com.mranalizer.application.dto.AnalysisRequestDto;
 import com.mranalizer.domain.model.MergeRequest;
 import com.mranalizer.domain.port.in.BrowseMrUseCase;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,7 +24,7 @@ public class BrowseRestController {
 
     @PostMapping
     public ResponseEntity<List<MrBrowseResponse>> browse(
-            @RequestBody AnalysisRequestDto request,
+            @Valid @RequestBody AnalysisRequestDto request,
             @RequestParam(defaultValue = "false") boolean forceRefresh) {
         List<MergeRequest> mergeRequests = browseMrUseCase.browse(request.toFetchCriteria(), forceRefresh);
         List<MrBrowseResponse> response = mergeRequests.stream()

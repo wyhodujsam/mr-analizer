@@ -61,6 +61,9 @@ public class AnalysisResultEntity {
     @Column(columnDefinition = "TEXT")
     private String summaryTable;
 
+    @Column(columnDefinition = "TEXT")
+    private String ruleResults;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "report_id")
     private AnalysisReportEntity report;
@@ -153,6 +156,9 @@ public class AnalysisResultEntity {
 
     public String getSummaryTable() { return summaryTable; }
     public void setSummaryTable(String summaryTable) { this.summaryTable = summaryTable; }
+
+    public String getRuleResults() { return ruleResults; }
+    public void setRuleResults(String ruleResults) { this.ruleResults = ruleResults; }
 
     public AnalysisReportEntity getReport() { return report; }
     public void setReport(AnalysisReportEntity report) { this.report = report; }

@@ -33,7 +33,7 @@ export default function MrTable({ results, reportId }: Props) {
           <th>Autor</th>
           <th>Wynik</th>
           <th>Werdykt</th>
-          <th></th>
+          <th><span className="visually-hidden">Akcje</span></th>
         </tr>
       </thead>
       <tbody>
@@ -42,6 +42,9 @@ export default function MrTable({ results, reportId }: Props) {
             key={item.id}
             className={`${verdictClass(item.verdict)} clickable-row`}
             onClick={() => navigate(`/mr/${reportId}/${item.id}`)}
+            onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/mr/${reportId}/${item.id}`); }}
+            tabIndex={0}
+            role="link"
             style={{ cursor: 'pointer' }}
           >
             <td>{item.externalId}</td>

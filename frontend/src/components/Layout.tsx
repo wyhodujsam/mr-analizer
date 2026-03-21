@@ -1,12 +1,12 @@
 import { Navbar, Container } from 'react-bootstrap';
-import { Outlet } from 'react-router-dom';
+import { Outlet, Link } from 'react-router-dom';
 
 export default function Layout() {
   return (
     <>
       <Navbar bg="dark" variant="dark" expand="lg">
         <Container>
-          <Navbar.Brand href="/">MR Analizer</Navbar.Brand>
+          <Navbar.Brand as={Link} to="/">MR Analizer</Navbar.Brand>
         </Container>
       </Navbar>
       <Container className="mt-4">

@@ -52,7 +52,9 @@ export default function MrDetailPage() {
   if (loading) {
     return (
       <div className="text-center mt-5">
-        <Spinner animation="border" />
+        <Spinner animation="border" role="status">
+          <span className="visually-hidden">Ladowanie...</span>
+        </Spinner>
         <p className="mt-2">Ladowanie szczegolow MR...</p>
       </div>
     );

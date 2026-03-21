@@ -2,11 +2,13 @@ package com.mranalizer.application.dto;
 
 import com.mranalizer.domain.exception.InvalidRequestException;
 import com.mranalizer.domain.model.FetchCriteria;
+import jakarta.validation.constraints.NotBlank;
 
 import java.time.LocalDate;
 import java.util.List;
 
 public record AnalysisRequestDto(
+        @NotBlank(message = "projectSlug is required")
         String projectSlug,
         String provider,
         String targetBranch,

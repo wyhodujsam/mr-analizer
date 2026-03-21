@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mranalizer.adapter.out.persistence.entity.AnalysisReportEntity;
 import com.mranalizer.adapter.out.persistence.entity.AnalysisResultEntity;
 import com.mranalizer.domain.model.*;
+import com.mranalizer.domain.model.RuleResult;
 import com.mranalizer.domain.port.out.AnalysisResultRepository;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -30,6 +31,7 @@ public class JpaAnalysisResultRepository implements AnalysisResultRepository {
     private static final TypeReference<List<AnalysisCategory>> LIST_OF_CATEGORY = new TypeReference<>() {};
     private static final TypeReference<List<HumanOversightItem>> LIST_OF_OVERSIGHT = new TypeReference<>() {};
     private static final TypeReference<List<SummaryAspect>> LIST_OF_SUMMARY = new TypeReference<>() {};
+    private static final TypeReference<List<RuleResult>> LIST_OF_RULE_RESULT = new TypeReference<>() {};
 
     public JpaAnalysisResultRepository(SpringDataAnalysisResultRepository springRepo,
                                        ObjectMapper objectMapper) {
@@ -121,6 +123,7 @@ public class JpaAnalysisResultRepository implements AnalysisResultRepository {
         entity.setHumanOversightRequired(toJsonGeneric(result.getHumanOversightRequired()));
         entity.setWhyLlmFriendly(toJson(result.getWhyLlmFriendly()));
         entity.setSummaryTable(toJsonGeneric(result.getSummaryTable()));
+        entity.setRuleResults(toJsonGeneric(result.getRuleResults()));
 
         MergeRequest mr = result.getMergeRequest();
         if (mr != null) {
@@ -206,6 +209,7 @@ public class JpaAnalysisResultRepository implements AnalysisResultRepository {
                 .humanOversightRequired(fromJsonGeneric(entity.getHumanOversightRequired(), LIST_OF_OVERSIGHT))
                 .whyLlmFriendly(fromJson(entity.getWhyLlmFriendly()))
                 .summaryTable(fromJsonGeneric(entity.getSummaryTable(), LIST_OF_SUMMARY))
+                .ruleResults(fromJsonGeneric(entity.getRuleResults(), LIST_OF_RULE_RESULT))
                 .build();
     }
 
