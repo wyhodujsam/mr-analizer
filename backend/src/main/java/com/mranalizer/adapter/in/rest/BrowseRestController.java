@@ -2,7 +2,6 @@ package com.mranalizer.adapter.in.rest;
 
 import com.mranalizer.adapter.in.rest.dto.MrBrowseResponse;
 import com.mranalizer.application.dto.AnalysisRequestDto;
-import com.mranalizer.domain.model.FetchCriteria;
 import com.mranalizer.domain.model.MergeRequest;
 import com.mranalizer.domain.port.in.BrowseMrUseCase;
 import org.springframework.http.ResponseEntity;
@@ -23,16 +22,7 @@ public class BrowseRestController {
 
     @PostMapping
     public ResponseEntity<List<MrBrowseResponse>> browse(@RequestBody AnalysisRequestDto request) {
-        FetchCriteria criteria = FetchCriteria.builder()
-                .projectSlug(request.projectSlug())
-                .targetBranch(request.targetBranch())
-                .state(request.state())
-                .after(request.after())
-                .before(request.before())
-                .limit(request.limit())
-                .build();
-
-        List<MergeRequest> mergeRequests = browseMrUseCase.browse(criteria);
+        List<MergeRequest> mergeRequests = browseMrUseCase.browse(request.toFetchCriteria());
         List<MrBrowseResponse> response = mergeRequests.stream()
                 .map(MrBrowseResponse::from)
                 .collect(Collectors.toList());

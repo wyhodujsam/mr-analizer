@@ -1,6 +1,6 @@
 package com.mranalizer.bdd.steps;
 
-import com.mranalizer.adapter.out.provider.github.RateLimitException;
+import com.mranalizer.domain.exception.ProviderRateLimitException;
 import com.mranalizer.domain.model.*;
 import com.mranalizer.domain.port.out.MergeRequestProvider;
 import io.cucumber.java.Before;
@@ -77,7 +77,7 @@ public class ProviderSteps {
     @Given("a provider that responds with rate limit exceeded")
     public void providerWithRateLimit() {
         when(mergeRequestProvider.fetchMergeRequests(any()))
-                .thenThrow(new RateLimitException("API rate limit exceeded. Try again in 60 seconds."));
+                .thenThrow(new ProviderRateLimitException("API rate limit exceeded. Try again in 60 seconds."));
         when(mergeRequestProvider.getProviderName()).thenReturn("github");
     }
 
@@ -163,8 +163,8 @@ public class ProviderSteps {
     @Then("the system should return a rate limit error with a clear message")
     public void systemShouldReturnRateLimitError() {
         assertNotNull(caughtException, "Expected an exception to be thrown");
-        assertTrue(caughtException instanceof RateLimitException,
-                "Expected RateLimitException but got: " + caughtException.getClass().getName());
+        assertTrue(caughtException instanceof ProviderRateLimitException,
+                "Expected ProviderRateLimitException but got: " + caughtException.getClass().getName());
         assertTrue(caughtException.getMessage().contains("rate limit"),
                 "Error message should mention rate limit, but was: " + caughtException.getMessage());
     }

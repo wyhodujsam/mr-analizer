@@ -184,40 +184,6 @@ class AnalyzeMrServiceTest {
         assertThat(result.getLlmComment()).contains("LLM error");
     }
 
-    @Test
-    void getReport_returnsFromRepository() {
-        AnalysisReport expected = AnalysisReport.of(1L, "owner/repo", "github", LocalDateTime.now(), List.of());
-        when(repository.findById(1L)).thenReturn(Optional.of(expected));
-
-        Optional<AnalysisReport> result = service.getReport(1L);
-
-        assertThat(result).isPresent();
-        assertThat(result.get().getId()).isEqualTo(1L);
-        verify(repository).findById(1L);
-    }
-
-    @Test
-    void getResult_findsInReport() {
-        AnalysisResult ar = AnalysisResult.builder()
-                .id(10L)
-                .mergeRequest(buildMr(1L, "MR 1", "desc", 5))
-                .score(0.8)
-                .verdict(Verdict.AUTOMATABLE)
-                .reasons(List.of("test"))
-                .matchedRules(List.of("rule1"))
-                .analyzedAt(LocalDateTime.now())
-                .build();
-
-        AnalysisReport report = AnalysisReport.of(1L, "owner/repo", "github", LocalDateTime.now(), List.of(ar));
-        when(repository.findById(1L)).thenReturn(Optional.of(report));
-
-        Optional<AnalysisResult> result = service.getResult(1L, 10L);
-
-        assertThat(result).isPresent();
-        assertThat(result.get().getId()).isEqualTo(10L);
-        assertThat(result.get().getScore()).isEqualTo(0.8);
-    }
-
     // -------------------------------------------------------------------------
     // Cache & delete tests (feature 002-mr-browse-analyze)
     // -------------------------------------------------------------------------

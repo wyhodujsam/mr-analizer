@@ -69,7 +69,8 @@ public class ScoringEngine {
 
         String llmComment = llmAssessment.comment();
         if (llmAssessment.scoreAdjustment() != 0.0) {
-            reasons.add("llm: " + llmComment + " ("
+            String commentText = llmComment != null ? llmComment : "no comment";
+            reasons.add("llm: " + commentText + " ("
                     + (llmAssessment.scoreAdjustment() > 0 ? "+" : "")
                     + llmAssessment.scoreAdjustment() + ")");
         }

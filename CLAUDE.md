@@ -1,6 +1,6 @@
 # mr_analizer Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-03-20
+Auto-generated from all feature plans. Last updated: 2026-03-21
 
 ## Active Technologies
 - Java 17 (backend), TypeScript 5.x (frontend) + Spring Boot 3.x (Web, Data JPA, Validation, WebFlux client), React 18, Vite, React-Bootstrap, Axios, React Router, Lombok (001-mvp-core)
@@ -52,10 +52,21 @@ cd frontend && npm run build          # production build
 - Java 17: Follow standard conventions. Lombok for boilerplate reduction.
 - TypeScript: Strict mode. Functional components with hooks.
 
-## Recent Changes
-- 001-mvp-core: Added Java 17 (backend), TypeScript 5.x (frontend) + Spring Boot 3.x (Web, Data JPA, Validation, WebFlux client), React 18, Vite, React-Bootstrap, Axios, React Router, Lombok
+## Domain Exceptions
 
-- Initial project setup
+Domain-level exceptions live in `domain/exception/` — adapters wrap provider-specific errors into these:
+- `ProviderException` — base for VCS provider failures
+- `ProviderRateLimitException` — rate limit exceeded
+- `ProviderAuthException` — auth failure
+- `ReportNotFoundException` — report/result not found
+- `InvalidRequestException` — input validation failure
+
+`GlobalExceptionHandler` catches each type with dedicated `@ExceptionHandler` (no string matching).
+
+## Recent Changes
+- 003-cleanup: Split AnalyzeMrService (command/query), domain exceptions, validation, NPE fixes, GlobalExceptionHandler cleanup
+- 002-mr-browse-analyze: Browse flow, repo CRUD, cache, MR selection
+- 001-mvp-core: Initial setup, scoring engine, GitHub adapter, React dashboard
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

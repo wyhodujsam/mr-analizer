@@ -2,9 +2,9 @@ package com.mranalizer.adapter.in.rest;
 
 import com.mranalizer.adapter.in.rest.dto.AnalysisResponse;
 import com.mranalizer.adapter.in.rest.dto.MrDetailResponse;
-import com.mranalizer.application.AnalyzeMrService;
 import com.mranalizer.application.dto.AnalysisRequestDto;
 import com.mranalizer.application.dto.AnalysisSummaryDto;
+import com.mranalizer.domain.exception.ReportNotFoundException;
 import com.mranalizer.domain.model.AnalysisReport;
 import com.mranalizer.domain.model.AnalysisResult;
 import com.mranalizer.domain.model.FetchCriteria;
@@ -14,7 +14,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 @RestController
@@ -23,27 +22,16 @@ public class AnalysisRestController {
 
     private final AnalyzeMrUseCase analyzeMrUseCase;
     private final GetAnalysisResultsUseCase getAnalysisResultsUseCase;
-    private final AnalyzeMrService analyzeMrService;
 
     public AnalysisRestController(AnalyzeMrUseCase analyzeMrUseCase,
-                                  GetAnalysisResultsUseCase getAnalysisResultsUseCase,
-                                  AnalyzeMrService analyzeMrService) {
+                                  GetAnalysisResultsUseCase getAnalysisResultsUseCase) {
         this.analyzeMrUseCase = analyzeMrUseCase;
         this.getAnalysisResultsUseCase = getAnalysisResultsUseCase;
-        this.analyzeMrService = analyzeMrService;
     }
 
     @PostMapping("/analysis")
     public ResponseEntity<AnalysisResponse> triggerAnalysis(@RequestBody AnalysisRequestDto request) {
-        FetchCriteria criteria = FetchCriteria.builder()
-                .projectSlug(request.projectSlug())
-                .targetBranch(request.targetBranch())
-                .state(request.state())
-                .after(request.after())
-                .before(request.before())
-                .limit(request.limit())
-                .build();
-
+        FetchCriteria criteria = request.toFetchCriteria();
         AnalysisReport report = analyzeMrUseCase.analyze(criteria, request.useLlm(), request.selectedMrIds());
         return ResponseEntity.ok(AnalysisResponse.from(report));
     }
@@ -69,7 +57,7 @@ public class AnalysisRestController {
                         report.getAutomatableCount(),
                         report.getMaybeCount(),
                         report.getNotSuitableCount(),
-                        List.of() // summary only, no results
+                        List.of()
                 ))
                 .collect(Collectors.toList());
         return ResponseEntity.ok(response);
@@ -78,13 +66,13 @@ public class AnalysisRestController {
     @GetMapping("/analysis/{reportId}")
     public ResponseEntity<AnalysisResponse> getReport(@PathVariable Long reportId) {
         AnalysisReport report = getAnalysisResultsUseCase.getReport(reportId)
-                .orElseThrow(() -> new NoSuchElementException("Report not found: " + reportId));
+                .orElseThrow(() -> new ReportNotFoundException("Report not found: " + reportId));
         return ResponseEntity.ok(AnalysisResponse.from(report));
     }
 
     @DeleteMapping("/analysis/{reportId}")
     public ResponseEntity<Void> deleteReport(@PathVariable Long reportId) {
-        analyzeMrService.deleteAnalysis(reportId);
+        analyzeMrUseCase.deleteAnalysis(reportId);
         return ResponseEntity.noContent().build();
     }
 
@@ -92,7 +80,7 @@ public class AnalysisRestController {
     public ResponseEntity<MrDetailResponse> getMrDetail(@PathVariable Long reportId,
                                                          @PathVariable Long resultId) {
         AnalysisResult result = getAnalysisResultsUseCase.getResult(reportId, resultId)
-                .orElseThrow(() -> new NoSuchElementException(
+                .orElseThrow(() -> new ReportNotFoundException(
                         "Result not found: reportId=" + reportId + ", resultId=" + resultId));
         return ResponseEntity.ok(MrDetailResponse.from(result));
     }
@@ -100,7 +88,7 @@ public class AnalysisRestController {
     @GetMapping("/summary/{reportId}")
     public ResponseEntity<AnalysisSummaryDto> getSummary(@PathVariable Long reportId) {
         AnalysisReport report = getAnalysisResultsUseCase.getReport(reportId)
-                .orElseThrow(() -> new NoSuchElementException("Report not found: " + reportId));
+                .orElseThrow(() -> new ReportNotFoundException("Report not found: " + reportId));
 
         int total = report.getTotalMrs();
         double autoPerc = total > 0 ? (double) report.getAutomatableCount() / total * 100 : 0;

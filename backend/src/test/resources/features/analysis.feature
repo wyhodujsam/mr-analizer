@@ -46,3 +46,7 @@ Feature: End-to-end merge request analysis
     When I trigger analysis for "owner/repo" with LLM enabled
     Then the analysis report should contain 1 results
     And every result should have an LLM comment containing "LLM error"
+
+  Scenario: Analysis with blank project slug is rejected
+    When I trigger analysis with a blank project slug
+    Then the system should return a validation error about project slug

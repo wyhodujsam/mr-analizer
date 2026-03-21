@@ -2,6 +2,7 @@ package com.mranalizer.adapter.out.provider.github;
 
 import com.mranalizer.adapter.out.provider.github.dto.GitHubFile;
 import com.mranalizer.adapter.out.provider.github.dto.GitHubPullRequest;
+import com.mranalizer.domain.exception.ProviderRateLimitException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -100,7 +101,7 @@ public class GitHubClient {
             try {
                 int value = Integer.parseInt(remaining.get(0));
                 if (value == 0) {
-                    throw new RateLimitException("GitHub API rate limit exceeded");
+                    throw new ProviderRateLimitException("GitHub API rate limit exceeded");
                 }
                 if (value < 10) {
                     log.warn("GitHub API rate limit low: {} requests remaining", value);

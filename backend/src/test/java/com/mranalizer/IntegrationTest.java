@@ -129,14 +129,15 @@ class IntegrationTest {
 
     @Test
     void postAnalysis_invalidSlug_returns400() {
-        // Empty projectSlug should trigger IllegalArgumentException from GitHubAdapter.parseOwnerRepo
-        // But since provider is mocked, we need to make the mock throw
-        when(mergeRequestProvider.fetchMergeRequests(any()))
-                .thenThrow(new IllegalArgumentException("projectSlug must be in 'owner/repo' format, got: "));
-        when(mergeRequestProvider.getProviderName()).thenReturn("github");
-
-        AnalysisRequestDto request = new AnalysisRequestDto(
-                "", "github", "main", "merged", null, null, 100, false, List.of());
+        // Sending a raw JSON map with blank projectSlug to trigger InvalidRequestException
+        Map<String, Object> request = Map.of(
+                "projectSlug", "",
+                "provider", "github",
+                "targetBranch", "main",
+                "state", "merged",
+                "limit", 100,
+                "useLlm", false
+        );
 
         @SuppressWarnings("rawtypes")
         ResponseEntity<Map> response = restTemplate.postForEntity(
