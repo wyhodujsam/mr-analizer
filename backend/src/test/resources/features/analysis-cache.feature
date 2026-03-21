@@ -39,3 +39,17 @@ Feature: Analysis management
     Then the analysis history should contain a report for "owner/repo"
     And the report should have an analyzed date
     And the report should have 3 total MRs
+
+  Scenario: Analysis history shows individual PRs with title and score
+    When I trigger analysis for "owner/repo" with selected MR ids "1,2"
+    Then the analysis history should contain 2 PR entries
+    And each PR entry should have a title and score
+
+  Scenario: Analysis history can be filtered by repository
+    When I trigger analysis for "owner/repo" with selected MR ids "1"
+    And I trigger analysis for "other/repo" with selected MR ids "2"
+    Then the analysis history should contain reports for 2 different repositories
+
+  Scenario: Analysis with multiple PRs shows separate entries per PR
+    When I trigger analysis for "owner/repo" with selected MR ids "1,2,3"
+    Then the analysis history should contain 3 PR entries for "owner/repo"

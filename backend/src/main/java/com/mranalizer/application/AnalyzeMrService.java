@@ -45,12 +45,14 @@ public class AnalyzeMrService implements AnalyzeMrUseCase {
             throw new InvalidRequestException("projectSlug is required");
         }
 
-        List<MergeRequest> mergeRequests = provider.fetchMergeRequests(criteria);
-
+        List<MergeRequest> mergeRequests;
         if (selectedMrIds != null && !selectedMrIds.isEmpty()) {
-            mergeRequests = mergeRequests.stream()
-                    .filter(mr -> selectedMrIds.contains(mr.getExternalId()))
+            // Fetch only selected MRs individually (avoid fetching all + files for unselected)
+            mergeRequests = selectedMrIds.stream()
+                    .map(mrId -> provider.fetchMergeRequest(criteria.getProjectSlug(), mrId))
                     .toList();
+        } else {
+            mergeRequests = provider.fetchMergeRequests(criteria);
         }
 
         List<AnalysisResult> results = new ArrayList<>();

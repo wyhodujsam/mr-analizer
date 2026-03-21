@@ -19,6 +19,9 @@ import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 public class AnalysisSteps {
@@ -65,6 +68,10 @@ public class AnalysisSteps {
                 .mapToObj(this::buildTestMr)
                 .toList();
         when(mergeRequestProvider.fetchMergeRequests(any())).thenReturn(mrs);
+        // Also mock individual MR fetching (used when selectedMrIds is provided)
+        for (MergeRequest mr : mrs) {
+            when(mergeRequestProvider.fetchMergeRequest(any(), eq(mr.getExternalId()))).thenReturn(mr);
+        }
     }
 
     @Given("the provider will fail with {string}")

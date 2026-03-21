@@ -67,6 +67,21 @@ public class GitHubClient {
         return allPrs;
     }
 
+    public GitHubPullRequest fetchPullRequest(String owner, String repo, int number) {
+        String url = String.format("/repos/%s/%s/pulls/%d", owner, repo, number);
+        var response = webClient.get()
+                .uri(url)
+                .retrieve()
+                .toEntity(GitHubPullRequest.class)
+                .block();
+
+        if (response == null || response.getBody() == null) {
+            throw new java.util.NoSuchElementException("PR #" + number + " not found in " + owner + "/" + repo);
+        }
+        checkRateLimit(response.getHeaders());
+        return response.getBody();
+    }
+
     public List<GitHubFile> fetchFiles(String owner, String repo, int number) {
         List<GitHubFile> allFiles = new ArrayList<>();
         String url = String.format("/repos/%s/%s/pulls/%d/files?per_page=100&page=1", owner, repo, number);

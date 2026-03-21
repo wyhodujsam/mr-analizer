@@ -62,13 +62,7 @@ public class GitHubAdapter implements MergeRequestProvider {
         String repo = parts[1];
         int number = Integer.parseInt(mrId);
 
-        List<GitHubPullRequest> prs = client.fetchPullRequests(owner, repo, "all", 1);
-        GitHubPullRequest pr = prs.stream()
-                .filter(p -> p.getNumber() == number)
-                .findFirst()
-                .orElseThrow(() -> new java.util.NoSuchElementException(
-                        "PR #" + mrId + " not found in " + projectSlug));
-
+        GitHubPullRequest pr = client.fetchPullRequest(owner, repo, number);
         List<GitHubFile> files = client.fetchFiles(owner, repo, number);
         return mapper.toDomain(pr, files, projectSlug);
     }

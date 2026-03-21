@@ -3,6 +3,7 @@ import { Alert, Button, Form, Row, Col, Spinner } from 'react-bootstrap';
 import RepoSelector from '../components/RepoSelector';
 import MrBrowseTable from '../components/MrBrowseTable';
 import SummaryCard from '../components/SummaryCard';
+import VerdictPieChart from '../components/VerdictPieChart';
 import MrTable from '../components/MrTable';
 import AnalysisHistory from '../components/AnalysisHistory';
 import {
@@ -128,14 +129,14 @@ export default function DashboardPage() {
     return req;
   }
 
-  async function handleBrowse(e: React.FormEvent) {
+  async function handleBrowse(e: React.FormEvent, forceRefresh = false) {
     e.preventDefault();
     if (!selectedSlug) return;
     setLoadingBrowse(true);
     setError(null);
     setAnalysisResponse(null);
     try {
-      const items = await browseMrs(buildRequest());
+      const items = await browseMrs(buildRequest(), forceRefresh);
       setBrowsedMrs(items);
       setSelectedMrIds(new Set(items.map(i => i.externalId)));
       setStep('browse');
@@ -144,6 +145,11 @@ export default function DashboardPage() {
     } finally {
       setLoadingBrowse(false);
     }
+  }
+
+  async function handleRefresh(e: React.MouseEvent) {
+    e.preventDefault();
+    await handleBrowse(e as unknown as React.FormEvent, true);
   }
 
   async function handleAnalyze() {
@@ -300,6 +306,16 @@ export default function DashboardPage() {
                     'Pobierz MR'
                   )}
                 </Button>
+                {step !== 'select' && (
+                  <Button
+                    variant="outline-secondary"
+                    onClick={handleRefresh}
+                    disabled={loadingBrowse}
+                    title="Odswiez z GitHub API"
+                  >
+                    Odswiez
+                  </Button>
+                )}
               </Col>
             </Row>
           </Form>
@@ -351,12 +367,23 @@ export default function DashboardPage() {
       {/* Step 3: Analysis results (replaces browse table) */}
       {step === 'analyzed' && analysisResponse && summaryProps && (
         <div className="mt-4">
-          <SummaryCard
-            totalMrs={summaryProps.totalMrs}
-            automatable={summaryProps.automatable}
-            maybe={summaryProps.maybe}
-            notSuitable={summaryProps.notSuitable}
-          />
+          <Row>
+            <Col md={8}>
+              <SummaryCard
+                totalMrs={summaryProps.totalMrs}
+                automatable={summaryProps.automatable}
+                maybe={summaryProps.maybe}
+                notSuitable={summaryProps.notSuitable}
+              />
+            </Col>
+            <Col md={4} className="d-flex align-items-center">
+              <VerdictPieChart
+                automatable={summaryProps.automatable.count}
+                maybe={summaryProps.maybe.count}
+                notSuitable={summaryProps.notSuitable.count}
+              />
+            </Col>
+          </Row>
 
           {analysisResponse.results.length === 0 ? (
             <Alert variant="info">Brak wynikow analizy.</Alert>

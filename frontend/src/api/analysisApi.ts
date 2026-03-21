@@ -56,8 +56,8 @@ export async function deleteRepo(id: number): Promise<void> {
   await api.delete(`/api/repos/${id}`);
 }
 
-export async function browseMrs(request: AnalysisRequest): Promise<MrBrowseItem[]> {
-  const { data } = await api.post<MrBrowseItem[]>('/api/browse', request);
+export async function browseMrs(request: AnalysisRequest, forceRefresh = false): Promise<MrBrowseItem[]> {
+  const { data } = await api.post<MrBrowseItem[]>(`/api/browse?forceRefresh=${forceRefresh}`, request);
   return data;
 }
 
