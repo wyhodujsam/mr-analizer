@@ -256,6 +256,41 @@ class IntegrationTest {
         assertThat(secondReportId).isNotEqualTo(firstReportId);
     }
 
+    @Test
+    void getMrDetail_preservesMrMetadata() {
+        setupMockProvider(1);
+
+        AnalysisRequestDto request = new AnalysisRequestDto(
+                "owner/metadata-test", "github", "main", "merged", null, null, 100, false, List.of());
+
+        ResponseEntity<AnalysisResponse> postResponse = restTemplate.postForEntity(
+                "/api/analysis", request, AnalysisResponse.class);
+        assertThat(postResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        Long reportId = postResponse.getBody().reportId();
+        Long resultId = postResponse.getBody().results().get(0).id();
+
+        ResponseEntity<MrDetailResponse> detailResponse = restTemplate.getForEntity(
+                "/api/analysis/" + reportId + "/mrs/" + resultId, MrDetailResponse.class);
+
+        assertThat(detailResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        MrDetailResponse detail = detailResponse.getBody();
+        assertThat(detail).isNotNull();
+
+        // Verify MR metadata survives round-trip (save → load)
+        assertThat(detail.sourceBranch()).isEqualTo("feature/pr-1");
+        assertThat(detail.targetBranch()).isEqualTo("main");
+        assertThat(detail.state()).isEqualTo("merged");
+        assertThat(detail.createdAt()).isNotNull();
+        assertThat(detail.mergedAt()).isNotNull();
+        assertThat(detail.labels()).isNotNull();
+        assertThat(detail.additions()).isEqualTo(58);
+        assertThat(detail.deletions()).isEqualTo(15);
+        assertThat(detail.changedFilesCount()).isEqualTo(5);
+        assertThat(detail.hasTests()).isTrue();
+        assertThat(detail.description()).isNotNull();
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------

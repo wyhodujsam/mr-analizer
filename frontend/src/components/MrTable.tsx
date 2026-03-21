@@ -1,4 +1,4 @@
-import { Table } from 'react-bootstrap';
+import { Badge, Button, Table } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import type { AnalysisResultItem } from '../types';
 import ScoreBadge from './ScoreBadge';
@@ -29,10 +29,11 @@ export default function MrTable({ results, reportId }: Props) {
       <thead className="table-dark">
         <tr>
           <th>#</th>
-          <th>Title</th>
-          <th>Author</th>
-          <th>Score</th>
-          <th>Verdict</th>
+          <th>Tytul</th>
+          <th>Autor</th>
+          <th>Wynik</th>
+          <th>Werdykt</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -48,8 +49,22 @@ export default function MrTable({ results, reportId }: Props) {
             <td>{item.author}</td>
             <td>
               <ScoreBadge score={item.score} verdict={item.verdict} />
+              {item.hasDetailedAnalysis && (
+                <Badge bg="info" className="ms-1" style={{ fontSize: '0.6rem' }}>LLM</Badge>
+              )}
             </td>
             <td>{item.verdict}</td>
+            <td onClick={(e) => e.stopPropagation()}>
+              {item.hasDetailedAnalysis && (
+                <Button
+                  size="sm"
+                  variant="outline-info"
+                  onClick={() => navigate(`/analysis/${reportId}/${item.id}`)}
+                >
+                  Szczegoly analizy
+                </Button>
+              )}
+            </td>
           </tr>
         ))}
       </tbody>

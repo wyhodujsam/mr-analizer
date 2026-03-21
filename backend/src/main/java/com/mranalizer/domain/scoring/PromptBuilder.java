@@ -18,19 +18,46 @@ public class PromptBuilder {
     private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\{\\{(\\w+)}}");
 
     public static final String DEFAULT_TEMPLATE =
-            "Analyze this Pull Request for LLM automation potential. " +
-            "Rate from -0.5 to +0.5 how suitable it is for automated execution. " +
-            "Respond in JSON: {\"scoreAdjustment\": 0.1, \"comment\": \"explanation\"}\n\n" +
-            "Title: {{title}}\n" +
-            "Description: {{description}}\n" +
-            "Files changed: {{filesChanged}}\n" +
-            "Additions: {{additions}}\n" +
-            "Deletions: {{deletions}}\n" +
-            "Has tests: {{hasTests}}\n" +
-            "Labels: {{labels}}\n" +
-            "Author: {{author}}\n" +
-            "Source branch: {{sourceBranch}}\n" +
-            "Target branch: {{targetBranch}}";
+            "Przeanalizuj tego Pull Requesta pod katem potencjalu automatyzacji przez LLM (np. Claude Code). " +
+            "Podaj szczegolowa, strukturyzowana ocene. Odpowiadaj po polsku.\n\n" +
+            "Dane PR:\n" +
+            "Tytul: {{title}}\n" +
+            "Opis: {{description}}\n" +
+            "Zmienione pliki: {{filesChanged}}\n" +
+            "Dodane linie: {{additions}}\n" +
+            "Usuniete linie: {{deletions}}\n" +
+            "Zawiera testy: {{hasTests}}\n" +
+            "Etykiety: {{labels}}\n" +
+            "Autor: {{author}}\n" +
+            "Branch zrodlowy: {{sourceBranch}}\n" +
+            "Branch docelowy: {{targetBranch}}\n\n" +
+            "Odpowiedz WYLACZNIE poprawnym obiektem JSON (bez markdown, bez dodatkowego tekstu) o dokladnie takiej strukturze:\n" +
+            "{\n" +
+            "  \"scoreAdjustment\": <liczba od -0.5 do 0.5>,\n" +
+            "  \"comment\": \"<podsumowanie w 1-2 zdaniach, po polsku>\",\n" +
+            "  \"overallAutomatability\": <liczba calkowita 0-100, procent szansy ze LLM dobrze to wykona>,\n" +
+            "  \"categories\": [\n" +
+            "    {\n" +
+            "      \"name\": \"<kategoria zmian, np. 'Podzial klasy CQRS', 'Hierarchia wyjatkow'>\",\n" +
+            "      \"score\": <liczba calkowita 0-100, na ile ta kategoria jest automatyzowalna>,\n" +
+            "      \"reasoning\": \"<dlaczego taki wynik — wymien konkretne wzorce kodu, technologie lub architekture, po polsku>\"\n" +
+            "    }\n" +
+            "  ],\n" +
+            "  \"humanOversightRequired\": [\n" +
+            "    {\n" +
+            "      \"area\": \"<co wymaga nadzoru czlowieka>\",\n" +
+            "      \"reasoning\": \"<dlaczego LLM nie poradzi sobie sam, po polsku>\"\n" +
+            "    }\n" +
+            "  ],\n" +
+            "  \"whyLlmFriendly\": [\"<powod 1, po polsku>\", \"<powod 2, po polsku>\"],\n" +
+            "  \"summaryTable\": [\n" +
+            "    {\n" +
+            "      \"aspect\": \"<np. 'Wykonanie kodu', 'Podejmowanie decyzji', 'Pisanie testow', 'Review'>\",\n" +
+            "      \"score\": <liczba calkowita 0-100 lub null jesli nie da sie ocenic>,\n" +
+            "      \"note\": \"<krotka uwaga, po polsku>\"\n" +
+            "    }\n" +
+            "  ]\n" +
+            "}";
 
     /**
      * Build a prompt by replacing placeholders in the template with values from the MergeRequest.

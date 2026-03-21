@@ -13,7 +13,7 @@ import { getMrDetail } from '../api/analysisApi';
 import ScoreBadge from '../components/ScoreBadge';
 import type { MrDetailResponse } from '../types';
 
-function formatDate(iso: string | null): string {
+function formatDate(iso: string | null | undefined): string {
   if (!iso) return '\u2014';
   return new Date(iso).toLocaleString();
 }
@@ -38,9 +38,9 @@ export default function MrDetailPage() {
           'data' in err.response
         ) {
           const data = (err.response as { data?: { message?: string } }).data;
-          setError(data?.message ?? 'Failed to load MR details.');
+          setError(data?.message ?? 'Nie udalo sie zaladowac szczegolow MR.');
         } else {
-          setError('Failed to connect to the server.');
+          setError('Nie udalo sie polaczyc z serwerem.');
         }
       })
       .finally(() => setLoading(false));
@@ -50,7 +50,7 @@ export default function MrDetailPage() {
     return (
       <div className="text-center mt-5">
         <Spinner animation="border" />
-        <p className="mt-2">Loading MR details...</p>
+        <p className="mt-2">Ladowanie szczegolow MR...</p>
       </div>
     );
   }
@@ -62,62 +62,71 @@ export default function MrDetailPage() {
   if (!detail) return null;
 
   const hasAnalysis = detail.score !== undefined && detail.score !== null && detail.verdict;
+  const labels = detail.labels ?? [];
+  const scoreBreakdown = detail.scoreBreakdown ?? [];
+  const hasUsefulBreakdown = scoreBreakdown.length > 0 && scoreBreakdown.some(e => e.weight !== 0 || e.reason);
+  const additions = detail.additions ?? 0;
+  const deletions = detail.deletions ?? 0;
+  const changedFilesCount = detail.changedFilesCount ?? 0;
 
   return (
     <div>
-      <div className="mb-3">
-        <Link to="/">&larr; Back to Dashboard</Link>
+      <div className="mb-3 d-flex gap-3">
+        <Link to="/">&larr; Powrot do dashboardu</Link>
+        {detail.hasDetailedAnalysis && (
+          <Link to={`/analysis/${reportId}/${resultId}`}>Szczegoly analizy LLM</Link>
+        )}
       </div>
 
       <h3 className="mb-1">{detail.title}</h3>
       <p className="text-muted mb-3">
-        #{detail.externalId} by <strong>{detail.author}</strong>
+        #{detail.externalId} autor: <strong>{detail.author}</strong>
       </p>
 
       <Row className="mb-4 g-3">
         <Col md={6}>
           <Card>
-            <Card.Header>Metadata</Card.Header>
+            <Card.Header>Metadane</Card.Header>
             <Card.Body>
               <Table size="sm" borderless className="mb-0">
                 <tbody>
                   <tr>
-                    <th style={{ width: '140px' }}>State</th>
+                    <th style={{ width: '140px' }}>Status</th>
                     <td>
-                      <Badge bg="secondary">{detail.state}</Badge>
+                      <Badge bg="secondary">{detail.state ?? '\u2014'}</Badge>
                     </td>
                   </tr>
                   <tr>
-                    <th>Source Branch</th>
-                    <td><code>{detail.sourceBranch}</code></td>
+                    <th>Branch zrodlowy</th>
+                    <td><code>{detail.sourceBranch ?? '\u2014'}</code></td>
                   </tr>
                   <tr>
-                    <th>Target Branch</th>
-                    <td><code>{detail.targetBranch}</code></td>
+                    <th>Branch docelowy</th>
+                    <td><code>{detail.targetBranch ?? '\u2014'}</code></td>
                   </tr>
                   <tr>
-                    <th>Created</th>
+                    <th>Utworzono</th>
                     <td>{formatDate(detail.createdAt)}</td>
                   </tr>
                   <tr>
-                    <th>Merged</th>
+                    <th>Zmergowano</th>
                     <td>{formatDate(detail.mergedAt)}</td>
                   </tr>
                   <tr>
-                    <th>Labels</th>
+                    <th>Etykiety</th>
                     <td>
-                      {detail.labels.length > 0
-                        ? detail.labels.map((l) => (
+                      {labels.length > 0
+                        ? labels.map((l) => (
                             <Badge key={l} bg="info" text="dark" className="me-1">
                               {l}
                             </Badge>
                           ))
-                        : <span className="text-muted">none</span>}
+                        : <span className="text-muted">brak</span>}
                     </td>
                   </tr>
                   <tr>
-                    <th>Has Tests</th>
-                    <td>{detail.hasTests ? 'Yes' : 'No'}</td>
+                    <th>Testy</th>
+                    <td>{detail.hasTests ? 'Tak' : 'Nie'}</td>
                   </tr>
                 </tbody>
               </Table>
@@ -127,21 +136,21 @@ export default function MrDetailPage() {
 
         <Col md={6}>
           <Card>
-            <Card.Header>Diff Stats</Card.Header>
+            <Card.Header>Statystyki zmian</Card.Header>
             <Card.Body>
               <Table size="sm" borderless className="mb-0">
                 <tbody>
                   <tr>
-                    <th style={{ width: '160px' }}>Additions</th>
-                    <td className="text-success">+{detail.diffStats.additions}</td>
+                    <th style={{ width: '160px' }}>Dodane linie</th>
+                    <td className="text-success">+{additions}</td>
                   </tr>
                   <tr>
-                    <th>Deletions</th>
-                    <td className="text-danger">-{detail.diffStats.deletions}</td>
+                    <th>Usuniete linie</th>
+                    <td className="text-danger">-{deletions}</td>
                   </tr>
                   <tr>
-                    <th>Changed Files</th>
-                    <td>{detail.diffStats.changedFilesCount}</td>
+                    <th>Zmienione pliki</th>
+                    <td>{changedFilesCount}</td>
                   </tr>
                 </tbody>
               </Table>
@@ -150,10 +159,17 @@ export default function MrDetailPage() {
 
           {hasAnalysis && (
             <Card className="mt-3">
-              <Card.Header>Score</Card.Header>
-              <Card.Body className="d-flex align-items-center gap-3">
-                <ScoreBadge score={detail.score} verdict={detail.verdict} />
-                <span className="text-muted">{detail.verdict}</span>
+              <Card.Header>Wynik</Card.Header>
+              <Card.Body>
+                <div className="d-flex align-items-center gap-3 mb-2">
+                  <ScoreBadge score={detail.score} verdict={detail.verdict} />
+                  <span className="text-muted">{detail.verdict}</span>
+                </div>
+                <small className={detail.hasDetailedAnalysis ? 'text-success' : 'text-muted'}>
+                  {detail.hasDetailedAnalysis
+                    ? 'Analiza z LLM (szczegoly dostepne)'
+                    : 'Analiza regul (bez LLM)'}
+                </small>
               </Card.Body>
             </Card>
           )}
@@ -162,7 +178,7 @@ export default function MrDetailPage() {
 
       {detail.description && (
         <Card className="mb-4">
-          <Card.Header>Description</Card.Header>
+          <Card.Header>Opis</Card.Header>
           <Card.Body>
             <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', margin: 0 }}>
               {detail.description}
@@ -173,27 +189,27 @@ export default function MrDetailPage() {
 
       {hasAnalysis && (
         <>
-          <Card className="mb-4">
-            <Card.Header>Score Breakdown</Card.Header>
+          {hasUsefulBreakdown && <Card className="mb-4">
+            <Card.Header>Rozbicie punktacji</Card.Header>
             <Card.Body className="p-0">
               <Table hover bordered className="mb-0">
                 <thead className="table-light">
                   <tr>
-                    <th>Rule</th>
-                    <th>Type</th>
-                    <th>Weight</th>
-                    <th>Reason</th>
+                    <th>Regula</th>
+                    <th>Typ</th>
+                    <th>Waga</th>
+                    <th>Powod</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {detail.scoreBreakdown.length === 0 ? (
+                  {scoreBreakdown.length === 0 ? (
                     <tr>
                       <td colSpan={4} className="text-center text-muted">
-                        No score breakdown available.
+                        Brak danych o rozbiciu punktacji.
                       </td>
                     </tr>
                   ) : (
-                    detail.scoreBreakdown.map((entry, idx) => (
+                    scoreBreakdown.map((entry, idx) => (
                       <tr key={idx}>
                         <td><code>{entry.rule}</code></td>
                         <td>
@@ -209,11 +225,11 @@ export default function MrDetailPage() {
                 </tbody>
               </Table>
             </Card.Body>
-          </Card>
+          </Card>}
 
           {detail.llmComment && (
             <Card className="mb-4">
-              <Card.Header>LLM Analysis</Card.Header>
+              <Card.Header>Komentarz LLM</Card.Header>
               <Card.Body>
                 <p style={{ whiteSpace: 'pre-wrap' }}>{detail.llmComment}</p>
               </Card.Body>
@@ -224,7 +240,7 @@ export default function MrDetailPage() {
 
       <div className="mb-4">
         <a href={detail.url} target="_blank" rel="noopener noreferrer" className="btn btn-outline-primary">
-          View Original PR &rarr;
+          Zobacz oryginalny PR &rarr;
         </a>
       </div>
     </div>

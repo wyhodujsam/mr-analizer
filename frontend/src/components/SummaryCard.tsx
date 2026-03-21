@@ -11,13 +11,13 @@ export default function SummaryCard({ totalMrs, automatable, maybe, notSuitable 
   return (
     <>
       <p className="text-muted mb-3">
-        Total PRs analyzed: <strong>{totalMrs}</strong>
+        Przeanalizowanych PR-ow: <strong>{totalMrs}</strong>
       </p>
       <Row className="mb-4 g-3">
         <Col md={4}>
           <Card border="success" className="h-100">
             <Card.Header className="bg-success text-white fw-semibold">
-              Automatable
+              Do automatyzacji
             </Card.Header>
             <Card.Body className="text-center">
               <div className="display-6 text-success fw-bold">{automatable.count}</div>
@@ -28,7 +28,7 @@ export default function SummaryCard({ totalMrs, automatable, maybe, notSuitable 
         <Col md={4}>
           <Card border="warning" className="h-100">
             <Card.Header className="bg-warning text-dark fw-semibold">
-              Maybe
+              Moze
             </Card.Header>
             <Card.Body className="text-center">
               <div className="display-6 text-warning fw-bold">{maybe.count}</div>
@@ -39,7 +39,7 @@ export default function SummaryCard({ totalMrs, automatable, maybe, notSuitable 
         <Col md={4}>
           <Card border="danger" className="h-100">
             <Card.Header className="bg-danger text-white fw-semibold">
-              Not Suitable
+              Nie nadaje sie
             </Card.Header>
             <Card.Body className="text-center">
               <div className="display-6 text-danger fw-bold">{notSuitable.count}</div>

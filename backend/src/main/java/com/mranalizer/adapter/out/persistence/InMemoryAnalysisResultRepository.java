@@ -90,6 +90,11 @@ public class InMemoryAnalysisResultRepository implements AnalysisResultRepositor
                         .matchedRules(r.getMatchedRules())
                         .llmComment(r.getLlmComment())
                         .analyzedAt(r.getAnalyzedAt())
+                        .overallAutomatability(r.getOverallAutomatability())
+                        .categories(r.getCategories())
+                        .humanOversightRequired(r.getHumanOversightRequired())
+                        .whyLlmFriendly(r.getWhyLlmFriendly())
+                        .summaryTable(r.getSummaryTable())
                         .build());
             }
         }

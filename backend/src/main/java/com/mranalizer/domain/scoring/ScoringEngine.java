@@ -83,6 +83,11 @@ public class ScoringEngine {
                 .matchedRules(matchedRuleNames)
                 .llmComment(llmComment)
                 .analyzedAt(LocalDateTime.now())
+                .overallAutomatability(llmAssessment.overallAutomatability())
+                .categories(llmAssessment.categories())
+                .humanOversightRequired(llmAssessment.humanOversightRequired())
+                .whyLlmFriendly(llmAssessment.whyLlmFriendly())
+                .summaryTable(llmAssessment.summaryTable())
                 .build();
     }
 

@@ -1,5 +1,22 @@
 export type Verdict = 'AUTOMATABLE' | 'MAYBE' | 'NOT_SUITABLE';
 
+export interface AnalysisCategory {
+  name: string;
+  score: number;
+  reasoning: string;
+}
+
+export interface HumanOversightItem {
+  area: string;
+  reasoning: string;
+}
+
+export interface SummaryAspect {
+  aspect: string;
+  score: number | null;
+  note: string;
+}
+
 export interface AnalysisResultItem {
   id: number;
   externalId: string;
@@ -11,6 +28,7 @@ export interface AnalysisResultItem {
   matchedRules: string[];
   llmComment: string | null;
   url: string;
+  hasDetailedAnalysis: boolean;
 }
 
 export interface AnalysisResponse {
@@ -44,13 +62,21 @@ export interface MrDetailResponse {
   createdAt: string;
   mergedAt: string | null;
   labels: string[];
-  diffStats: { additions: number; deletions: number; changedFilesCount: number };
+  additions: number;
+  deletions: number;
+  changedFilesCount: number;
   hasTests: boolean;
   score: number;
   verdict: Verdict;
   scoreBreakdown: ScoreBreakdownEntry[];
   llmComment: string | null;
   url: string;
+  overallAutomatability: number;
+  categories: AnalysisCategory[];
+  humanOversightRequired: HumanOversightItem[];
+  whyLlmFriendly: string[];
+  summaryTable: SummaryAspect[];
+  hasDetailedAnalysis: boolean;
 }
 
 export interface AnalysisSummary {

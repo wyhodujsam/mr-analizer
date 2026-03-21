@@ -3,6 +3,7 @@ package com.mranalizer.bdd.steps;
 import com.mranalizer.domain.exception.InvalidRequestException;
 import com.mranalizer.domain.model.*;
 import com.mranalizer.domain.port.in.AnalyzeMrUseCase;
+import com.mranalizer.domain.port.in.GetAnalysisResultsUseCase;
 import com.mranalizer.domain.port.out.LlmAnalyzer;
 import com.mranalizer.domain.port.out.MergeRequestProvider;
 import io.cucumber.java.Before;
@@ -229,6 +230,100 @@ public class AnalysisSteps {
         assertTrue(caughtException.getMessage().toLowerCase().contains("projectslug")
                         || caughtException.getMessage().toLowerCase().contains("project"),
                 "Error message should mention projectSlug, but was: " + caughtException.getMessage());
+    }
+
+    // --- Detailed LLM analysis steps ---
+
+    @Given("the LLM analyzer returns a detailed assessment with overall automatability {int}")
+    public void llmAnalyzerReturnsDetailedAssessment(int overallScore) {
+        LlmAssessment detailed = new LlmAssessment(
+                0.3, "Detailed analysis comment", "claude-cli",
+                overallScore,
+                List.of(
+                        new AnalysisCategory("CQRS split", 95, "Mechanical extraction of query methods"),
+                        new AnalysisCategory("Exception hierarchy", 98, "Boilerplate class creation")
+                ),
+                List.of(
+                        new HumanOversightItem("Architecture decisions", "LLM cannot decide what to split")
+                ),
+                List.of("No domain creativity needed", "Clear patterns (CQRS, DRY)"),
+                List.of(
+                        new SummaryAspect("Code execution", 95, "automatable"),
+                        new SummaryAspect("Decision making", 50, "requires human instructions")
+                )
+        );
+        when(llmAnalyzer.analyze(any())).thenReturn(detailed);
+        when(llmAnalyzer.getProviderName()).thenReturn("claude-cli");
+    }
+
+    @Given("the LLM analyzer returns assessment with only score and comment")
+    public void llmAnalyzerReturnsPartialAssessment() {
+        when(llmAnalyzer.analyze(any()))
+                .thenReturn(new LlmAssessment(0.1, "partial analysis", "claude-cli"));
+        when(llmAnalyzer.getProviderName()).thenReturn("claude-cli");
+    }
+
+    @Then("every result should have overall automatability of {int}")
+    public void everyResultShouldHaveOverallAutomatability(int expected) {
+        assertNotNull(report);
+        for (AnalysisResult r : report.getResults()) {
+            assertEquals(expected, r.getOverallAutomatability(),
+                    "Expected overallAutomatability=" + expected + " but was " + r.getOverallAutomatability());
+        }
+    }
+
+    @Then("every result should have at least {int} analysis category/categories")
+    public void everyResultShouldHaveCategories(int minCount) {
+        assertNotNull(report);
+        for (AnalysisResult r : report.getResults()) {
+            assertTrue(r.getCategories().size() >= minCount,
+                    "Expected at least " + minCount + " categories but had " + r.getCategories().size());
+        }
+    }
+
+    @Then("every result should have {int} analysis category/categories")
+    public void everyResultShouldHaveExactCategories(int count) {
+        assertNotNull(report);
+        for (AnalysisResult r : report.getResults()) {
+            assertEquals(count, r.getCategories().size(),
+                    "Expected " + count + " categories but had " + r.getCategories().size());
+        }
+    }
+
+    @Then("every result should have at least {int} human oversight item(s)")
+    public void everyResultShouldHaveHumanOversight(int minCount) {
+        assertNotNull(report);
+        for (AnalysisResult r : report.getResults()) {
+            assertTrue(r.getHumanOversightRequired().size() >= minCount,
+                    "Expected at least " + minCount + " oversight items but had " + r.getHumanOversightRequired().size());
+        }
+    }
+
+    @Then("every result should have {int} human oversight item(s)")
+    public void everyResultShouldHaveExactHumanOversight(int count) {
+        assertNotNull(report);
+        for (AnalysisResult r : report.getResults()) {
+            assertEquals(count, r.getHumanOversightRequired().size(),
+                    "Expected " + count + " oversight items but had " + r.getHumanOversightRequired().size());
+        }
+    }
+
+    @Then("every result should have at least {int} LLM-friendly reason(s)")
+    public void everyResultShouldHaveLlmFriendlyReasons(int minCount) {
+        assertNotNull(report);
+        for (AnalysisResult r : report.getResults()) {
+            assertTrue(r.getWhyLlmFriendly().size() >= minCount,
+                    "Expected at least " + minCount + " LLM-friendly reasons but had " + r.getWhyLlmFriendly().size());
+        }
+    }
+
+    @Then("every result should have at least {int} summary aspect(s)")
+    public void everyResultShouldHaveSummaryAspects(int minCount) {
+        assertNotNull(report);
+        for (AnalysisResult r : report.getResults()) {
+            assertTrue(r.getSummaryTable().size() >= minCount,
+                    "Expected at least " + minCount + " summary aspects but had " + r.getSummaryTable().size());
+        }
     }
 
     // --- Helpers ---
