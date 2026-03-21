@@ -75,4 +75,13 @@ spring:
     show-sql: false
   h2:
     console:
+      enabled: false
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  h2:
+    console:
       enabled: true

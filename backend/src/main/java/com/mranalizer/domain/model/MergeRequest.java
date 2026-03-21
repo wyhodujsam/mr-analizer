@@ -40,9 +40,9 @@ public class MergeRequest {
         this.state = builder.state;
         this.createdAt = builder.createdAt;
         this.mergedAt = builder.mergedAt;
-        this.labels = builder.labels;
-        this.changedFiles = builder.changedFiles;
-        this.diffStats = builder.diffStats;
+        this.labels = builder.labels != null ? List.copyOf(builder.labels) : List.of();
+        this.changedFiles = builder.changedFiles != null ? List.copyOf(builder.changedFiles) : List.of();
+        this.diffStats = builder.diffStats != null ? builder.diffStats : new DiffStats(0, 0, 0);
         this.hasTests = builder.hasTests;
         this.ciPassed = builder.ciPassed;
         this.approvalsCount = builder.approvalsCount;
@@ -65,7 +65,7 @@ public class MergeRequest {
     public List<String> getLabels() { return labels; }
     public List<ChangedFile> getChangedFiles() { return changedFiles; }
     public DiffStats getDiffStats() { return diffStats; }
-    public boolean isHasTests() { return hasTests; }
+    public boolean hasTests() { return hasTests; }
     public boolean isCiPassed() { return ciPassed; }
     public int getApprovalsCount() { return approvalsCount; }
     public int getCommentsCount() { return commentsCount; }

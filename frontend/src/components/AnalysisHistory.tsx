@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Table, Button, Form } from 'react-bootstrap';
 import ScoreBadge from './ScoreBadge';
-import type { AnalysisResponse, Verdict } from '../types';
+import type { AnalysisResponse } from '../types';
+import { formatDate } from '../utils/format';
+import { verdictClass, verdictLabel } from '../utils/verdict';
 
 interface Props {
   analyses: AnalysisResponse[];
@@ -17,30 +19,10 @@ interface FlatRow {
   externalId: string;
   title: string;
   author: string;
-  score: number;
-  verdict: Verdict;
+  score: number | null;
+  verdict: Verdict | null;
   url: string;
   hasDetailedAnalysis: boolean;
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString();
-}
-
-function verdictLabel(v: Verdict): string {
-  switch (v) {
-    case 'AUTOMATABLE': return 'Auto';
-    case 'MAYBE': return 'Moze';
-    case 'NOT_SUITABLE': return 'Nie';
-  }
-}
-
-function verdictClass(v: Verdict): string {
-  switch (v) {
-    case 'AUTOMATABLE': return 'text-success';
-    case 'MAYBE': return 'text-warning';
-    case 'NOT_SUITABLE': return 'text-danger';
-  }
 }
 
 export default function AnalysisHistory({ analyses, onDelete }: Props) {
@@ -78,7 +60,14 @@ export default function AnalysisHistory({ analyses, onDelete }: Props) {
     reportResultCounts.set(a.reportId, a.results.length);
   }
 
-  const seenReports = new Set<number>();
+  const firstReportRow = new Set<string>();
+  const seenReportIds = new Set<number>();
+  for (const r of filteredRows) {
+    if (!seenReportIds.has(r.reportId)) {
+      seenReportIds.add(r.reportId);
+      firstReportRow.add(`${r.reportId}-${r.id}`);
+    }
+  }
 
   return (
     <div className="analysis-history">
@@ -115,14 +104,13 @@ export default function AnalysisHistory({ analyses, onDelete }: Props) {
         </thead>
         <tbody>
           {filteredRows.map((r) => {
-            const isFirstInGroup = !seenReports.has(r.reportId);
+            const isFirstInGroup = firstReportRow.has(`${r.reportId}-${r.id}`);
             const isGrouped = (reportResultCounts.get(r.reportId) ?? 0) > 1;
-            seenReports.add(r.reportId);
 
             return (
               <tr
                 key={`${r.reportId}-${r.id}`}
-                className={`clickable-row ${isGrouped ? 'verdict-' + (r.verdict === 'NOT_SUITABLE' ? 'not-suitable' : r.verdict.toLowerCase()) : ''}`}
+                className={`clickable-row ${isGrouped && r.verdict ? 'verdict-' + (r.verdict === 'NOT_SUITABLE' ? 'not-suitable' : r.verdict.toLowerCase()) : ''}`}
                 onClick={() => navigate(r.hasDetailedAnalysis
                   ? `/analysis/${r.reportId}/${r.id}`
                   : `/mr/${r.reportId}/${r.id}`)}

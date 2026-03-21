@@ -31,28 +31,31 @@ public class BrowseMrService implements BrowseMrUseCase {
         return browse(criteria, false);
     }
 
+    @Override
     public List<MergeRequest> browse(FetchCriteria criteria, boolean forceRefresh) {
-        String cacheKey = criteria.getProjectSlug();
+        String cacheKey = criteria.cacheKey();
 
-        if (!forceRefresh && cache.containsKey(cacheKey)) {
-            log.info("Returning cached browse results for {}", cacheKey);
-            return cache.get(cacheKey);
+        if (forceRefresh) {
+            cache.remove(cacheKey);
         }
 
-        log.info("Fetching fresh browse results for {}", cacheKey);
-        List<MergeRequest> mergeRequests = provider.fetchMergeRequests(criteria);
-        cache.put(cacheKey, mergeRequests);
+        List<MergeRequest> result = cache.computeIfAbsent(cacheKey, key -> {
+            log.info("Fetching fresh browse results for {}", criteria.getProjectSlug());
+            return provider.fetchMergeRequests(criteria);
+        });
 
         manageReposUseCase.add(criteria.getProjectSlug(), provider.getProviderName());
-        return mergeRequests;
+        return result;
     }
 
+    @Override
     public void invalidateCache(String projectSlug) {
-        cache.remove(projectSlug);
+        cache.keySet().removeIf(key -> key.startsWith(projectSlug + "|"));
         log.info("Browse cache invalidated for {}", projectSlug);
     }
 
+    @Override
     public boolean hasCachedResults(String projectSlug) {
-        return cache.containsKey(projectSlug);
+        return cache.keySet().stream().anyMatch(key -> key.startsWith(projectSlug + "|"));
     }
 }

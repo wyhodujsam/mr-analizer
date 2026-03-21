@@ -28,10 +28,18 @@ export default function AnalysisDetailPage() {
 
   useEffect(() => {
     if (!reportId || !resultId) return;
+    const controller = new AbortController();
     getMrDetail(Number(reportId), Number(resultId))
-      .then(setDetail)
-      .catch(() => setError('Nie udalo sie zaladowac szczegolow analizy.'))
-      .finally(() => setLoading(false));
+      .then((data) => {
+        if (!controller.signal.aborted) setDetail(data);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setError('Nie udalo sie zaladowac szczegolow analizy.');
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
   }, [reportId, resultId]);
 
   if (loading) {
@@ -78,7 +86,7 @@ export default function AnalysisDetailPage() {
           <Card>
             <Card.Header>Ocena ogolna</Card.Header>
             <Card.Body>
-              {hasDetailed ? (
+              {hasDetailed && detail.overallAutomatability != null ? (
                 <div className="d-flex align-items-center gap-3">
                   <h2 className="mb-0">
                     <Badge bg={scoreBadgeColor(detail.overallAutomatability)}>
@@ -100,7 +108,7 @@ export default function AnalysisDetailPage() {
             <Card.Header>Score / Verdict</Card.Header>
             <Card.Body className="d-flex align-items-center gap-3">
               <ScoreBadge score={detail.score} verdict={detail.verdict} />
-              <span className="text-muted">{detail.verdict}</span>
+              <span className="text-muted">{detail.verdict ?? '—'}</span>
             </Card.Body>
           </Card>
         </Col>

@@ -2,6 +2,7 @@ package com.mranalizer.adapter.in.rest;
 
 import com.mranalizer.adapter.in.rest.dto.SavedRepoResponse;
 import com.mranalizer.domain.model.SavedRepository;
+import com.mranalizer.domain.exception.InvalidRequestException;
 import com.mranalizer.domain.port.in.ManageReposUseCase;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -31,6 +32,9 @@ public class RepoRestController {
     @PostMapping
     public ResponseEntity<SavedRepoResponse> addRepo(@RequestBody Map<String, String> body) {
         String projectSlug = body.get("projectSlug");
+        if (projectSlug == null || projectSlug.isBlank()) {
+            throw new InvalidRequestException("projectSlug is required");
+        }
         String provider = body.getOrDefault("provider", "github");
         SavedRepository saved = manageReposUseCase.add(projectSlug, provider);
         return ResponseEntity.ok(SavedRepoResponse.from(saved));

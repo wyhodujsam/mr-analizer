@@ -22,8 +22,8 @@ export interface AnalysisResultItem {
   externalId: string;
   title: string;
   author: string;
-  score: number;
-  verdict: Verdict;
+  score: number | null;
+  verdict: Verdict | null;
   reasons: string[];
   matchedRules: string[];
   llmComment: string | null;
@@ -56,36 +56,27 @@ export interface MrDetailResponse {
   title: string;
   author: string;
   description: string | null;
-  sourceBranch: string;
-  targetBranch: string;
-  state: string;
-  createdAt: string;
+  sourceBranch: string | null;
+  targetBranch: string | null;
+  state: string | null;
+  createdAt: string | null;
   mergedAt: string | null;
-  labels: string[];
+  labels: string[] | null;
   additions: number;
   deletions: number;
   changedFilesCount: number;
   hasTests: boolean;
-  score: number;
-  verdict: Verdict;
-  scoreBreakdown: ScoreBreakdownEntry[];
+  score: number | null;
+  verdict: Verdict | null;
+  scoreBreakdown: ScoreBreakdownEntry[] | null;
   llmComment: string | null;
   url: string;
-  overallAutomatability: number;
-  categories: AnalysisCategory[];
-  humanOversightRequired: HumanOversightItem[];
-  whyLlmFriendly: string[];
-  summaryTable: SummaryAspect[];
+  overallAutomatability: number | null;
+  categories: AnalysisCategory[] | null;
+  humanOversightRequired: HumanOversightItem[] | null;
+  whyLlmFriendly: string[] | null;
+  summaryTable: SummaryAspect[] | null;
   hasDetailedAnalysis: boolean;
-}
-
-export interface AnalysisSummary {
-  reportId: number;
-  projectSlug: string;
-  totalMrs: number;
-  automatable: { count: number; percentage: number };
-  maybe: { count: number; percentage: number };
-  notSuitable: { count: number; percentage: number };
 }
 
 export interface AnalysisRequest {
@@ -98,11 +89,6 @@ export interface AnalysisRequest {
   limit: number;
   useLlm: boolean;
   selectedMrIds?: string[];
-}
-
-export interface ErrorResponse {
-  error: string;
-  message: string;
 }
 
 export interface SavedRepository {

@@ -74,7 +74,7 @@ public record MrDetailResponse(
                 mr.getDiffStats() != null ? mr.getDiffStats().additions() : 0,
                 mr.getDiffStats() != null ? mr.getDiffStats().deletions() : 0,
                 mr.getDiffStats() != null ? mr.getDiffStats().changedFilesCount() : 0,
-                mr.isHasTests(),
+                mr.hasTests(),
                 result.getScore(),
                 result.getVerdict().name(),
                 result.getReasons(),

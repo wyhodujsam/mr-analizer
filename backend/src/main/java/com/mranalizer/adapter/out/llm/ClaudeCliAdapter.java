@@ -2,7 +2,7 @@ package com.mranalizer.adapter.out.llm;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mranalizer.domain.model.*;;
+import com.mranalizer.domain.model.*;
 import com.mranalizer.domain.port.out.LlmAnalyzer;
 import com.mranalizer.domain.scoring.PromptBuilder;
 import jakarta.annotation.PostConstruct;
@@ -75,6 +75,7 @@ public class ClaudeCliAdapter implements LlmAnalyzer {
         try {
             Process process = new ProcessBuilder(command, "-p", prompt, "--output-format", "json")
                     .redirectInput(ProcessBuilder.Redirect.from(new java.io.File("/dev/null")))
+                    .redirectErrorStream(true)
                     .start();
 
             boolean finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);

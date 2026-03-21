@@ -65,6 +65,19 @@ public class JpaAnalysisResultRepository implements AnalysisResultRepository {
         springRepo.deleteById(id);
     }
 
+    @Override
+    public Optional<AnalysisResult> findResult(Long reportId, Long resultId) {
+        return springRepo.findResultByReportIdAndId(reportId, resultId)
+                .map(this::toResultDomain);
+    }
+
+    @Override
+    public List<AnalysisReport> findByProjectSlug(String projectSlug) {
+        return springRepo.findByProjectSlug(projectSlug).stream()
+                .map(this::toDomain)
+                .toList();
+    }
+
     // -------------------------------------------------------------------------
     // Mapping: domain -> entity
     // -------------------------------------------------------------------------
@@ -124,7 +137,7 @@ public class JpaAnalysisResultRepository implements AnalysisResultRepository {
             entity.setMrCreatedAt(mr.getCreatedAt());
             entity.setMrMergedAt(mr.getMergedAt());
             entity.setMrLabels(toJson(mr.getLabels()));
-            entity.setMrHasTests(mr.isHasTests());
+            entity.setMrHasTests(mr.hasTests());
             if (mr.getDiffStats() != null) {
                 entity.setMrAdditions(mr.getDiffStats().additions());
                 entity.setMrDeletions(mr.getDiffStats().deletions());

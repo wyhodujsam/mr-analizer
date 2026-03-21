@@ -36,7 +36,7 @@ public class ScoringEngine {
         List<String> matchedRuleNames = new ArrayList<>();
 
         boolean excluded = ruleResults.stream()
-                .anyMatch(r -> r.weight() <= -999.0);
+                .anyMatch(r -> r.weight() == EXCLUDE_WEIGHT);
 
         double score;
         Verdict verdict;
@@ -45,7 +45,7 @@ public class ScoringEngine {
             score = 0.0;
             verdict = Verdict.NOT_SUITABLE;
             ruleResults.stream()
-                    .filter(r -> r.weight() <= -999.0)
+                    .filter(r -> r.weight() == EXCLUDE_WEIGHT)
                     .forEach(r -> {
                         reasons.add(r.reason());
                         matchedRuleNames.add(r.ruleName());

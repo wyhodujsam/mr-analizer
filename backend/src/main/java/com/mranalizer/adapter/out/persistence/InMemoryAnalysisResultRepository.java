@@ -58,6 +58,21 @@ public class InMemoryAnalysisResultRepository implements AnalysisResultRepositor
         store.remove(id);
     }
 
+    @Override
+    public Optional<AnalysisResult> findResult(Long reportId, Long resultId) {
+        return findById(reportId)
+                .flatMap(report -> report.getResults().stream()
+                        .filter(r -> resultId.equals(r.getId()))
+                        .findFirst());
+    }
+
+    @Override
+    public List<AnalysisReport> findByProjectSlug(String projectSlug) {
+        return store.values().stream()
+                .filter(r -> projectSlug.equals(r.getProjectSlug()))
+                .toList();
+    }
+
     /** Removes all stored reports. Used for test isolation between scenarios. */
     public void clear() {
         store.clear();

@@ -12,11 +12,7 @@ import {
 import { getMrDetail } from '../api/analysisApi';
 import ScoreBadge from '../components/ScoreBadge';
 import type { MrDetailResponse } from '../types';
-
-function formatDate(iso: string | null | undefined): string {
-  if (!iso) return '\u2014';
-  return new Date(iso).toLocaleString();
-}
+import { formatDate } from '../utils/format';
 
 export default function MrDetailPage() {
   const { reportId, resultId } = useParams<{ reportId: string; resultId: string }>();
@@ -26,9 +22,13 @@ export default function MrDetailPage() {
 
   useEffect(() => {
     if (!reportId || !resultId) return;
+    const controller = new AbortController();
     getMrDetail(Number(reportId), Number(resultId))
-      .then(setDetail)
+      .then((data) => {
+        if (!controller.signal.aborted) setDetail(data);
+      })
       .catch((err: unknown) => {
+        if (controller.signal.aborted) return;
         if (
           err &&
           typeof err === 'object' &&
@@ -43,7 +43,10 @@ export default function MrDetailPage() {
           setError('Nie udalo sie polaczyc z serwerem.');
         }
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
   }, [reportId, resultId]);
 
   if (loading) {
@@ -163,7 +166,7 @@ export default function MrDetailPage() {
               <Card.Body>
                 <div className="d-flex align-items-center gap-3 mb-2">
                   <ScoreBadge score={detail.score} verdict={detail.verdict} />
-                  <span className="text-muted">{detail.verdict}</span>
+                  <span className="text-muted">{detail.verdict ?? '—'}</span>
                 </div>
                 <small className={detail.hasDetailedAnalysis ? 'text-success' : 'text-muted'}>
                   {detail.hasDetailedAnalysis

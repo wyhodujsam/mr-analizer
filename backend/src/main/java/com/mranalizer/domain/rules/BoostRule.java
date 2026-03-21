@@ -54,14 +54,14 @@ public class BoostRule implements Rule {
         });
     }
 
-    public static BoostRule byDescriptionKeywords(List<String> keywords, double weight) {
+    public static BoostRule byKeywords(List<String> keywords, double weight) {
         return byTitleKeywords(keywords, weight);
     }
 
     public static BoostRule byHasTests(double weight) {
         String ruleName = "boost-by-has-tests";
         return new BoostRule(ruleName, mr -> {
-            if (mr.isHasTests()) {
+            if (mr.hasTests()) {
                 return matched(ruleName, weight, "PR includes test files");
             }
             return notMatched(ruleName);

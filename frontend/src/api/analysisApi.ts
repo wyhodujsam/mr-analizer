@@ -3,7 +3,6 @@ import type {
   AnalysisRequest,
   AnalysisResponse,
   MrDetailResponse,
-  AnalysisSummary,
   SavedRepository,
   MrBrowseItem,
 } from '../types';
@@ -34,11 +33,6 @@ export async function getMrDetail(
   const { data } = await api.get<MrDetailResponse>(
     `/api/analysis/${reportId}/mrs/${resultId}`
   );
-  return data;
-}
-
-export async function getSummary(reportId: number): Promise<AnalysisSummary> {
-  const { data } = await api.get<AnalysisSummary>(`/api/summary/${reportId}`);
   return data;
 }
 

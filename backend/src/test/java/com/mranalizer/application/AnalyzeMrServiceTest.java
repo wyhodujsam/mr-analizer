@@ -51,7 +51,7 @@ class AnalyzeMrServiceTest {
 
         rules = List.of(
                 ExcludeRule.byLabels(List.of("hotfix", "security")),
-                BoostRule.byDescriptionKeywords(List.of("refactor", "cleanup"), 0.2),
+                BoostRule.byKeywords(List.of("refactor", "cleanup"), 0.2),
                 BoostRule.byHasTests(0.15),
                 PenalizeRule.byNoDescription(-0.3)
         );

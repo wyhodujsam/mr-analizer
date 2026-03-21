@@ -1,11 +1,15 @@
 package com.mranalizer.domain.model;
 
+import com.mranalizer.domain.exception.InvalidRequestException;
+
 import java.time.LocalDate;
 
 /**
  * Criteria used to filter merge requests when fetching from a VCS provider.
  */
 public class FetchCriteria {
+
+    private static final int MAX_LIMIT = 200;
 
     private final String projectSlug;
     private final String targetBranch;
@@ -20,7 +24,14 @@ public class FetchCriteria {
         this.state = builder.state;
         this.after = builder.after;
         this.before = builder.before;
-        this.limit = builder.limit;
+        this.limit = Math.min(builder.limit, MAX_LIMIT);
+        validate();
+    }
+
+    private void validate() {
+        if (after != null && before != null && after.isAfter(before)) {
+            throw new InvalidRequestException("'after' date must be before 'before' date");
+        }
     }
 
     public String getProjectSlug() { return projectSlug; }
@@ -29,6 +40,15 @@ public class FetchCriteria {
     public LocalDate getAfter() { return after; }
     public LocalDate getBefore() { return before; }
     public int getLimit() { return limit; }
+
+    public String cacheKey() {
+        return projectSlug + "|" +
+               (state != null ? state : "") + "|" +
+               (targetBranch != null ? targetBranch : "") + "|" +
+               (after != null ? after : "") + "|" +
+               (before != null ? before : "") + "|" +
+               limit;
+    }
 
     public static Builder builder() {
         return new Builder();

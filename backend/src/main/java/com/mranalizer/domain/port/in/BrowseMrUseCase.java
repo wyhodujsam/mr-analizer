@@ -11,4 +11,10 @@ import java.util.List;
 public interface BrowseMrUseCase {
 
     List<MergeRequest> browse(FetchCriteria criteria);
+
+    List<MergeRequest> browse(FetchCriteria criteria, boolean forceRefresh);
+
+    void invalidateCache(String projectSlug);
+
+    boolean hasCachedResults(String projectSlug);
 }

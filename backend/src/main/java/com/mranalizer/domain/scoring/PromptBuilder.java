@@ -89,7 +89,7 @@ public class PromptBuilder {
             case "filesChanged" -> String.valueOf(mr.getDiffStats() != null ? mr.getDiffStats().changedFilesCount() : 0);
             case "additions" -> String.valueOf(mr.getDiffStats() != null ? mr.getDiffStats().additions() : 0);
             case "deletions" -> String.valueOf(mr.getDiffStats() != null ? mr.getDiffStats().deletions() : 0);
-            case "hasTests" -> String.valueOf(mr.isHasTests());
+            case "hasTests" -> String.valueOf(mr.hasTests());
             case "labels" -> {
                 List<String> labels = mr.getLabels();
                 yield (labels != null && !labels.isEmpty()) ? String.join(", ", labels) : "none";

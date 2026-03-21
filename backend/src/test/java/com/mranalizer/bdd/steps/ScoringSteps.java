@@ -1,6 +1,7 @@
 package com.mranalizer.bdd.steps;
 
 import com.mranalizer.domain.model.*;
+import com.mranalizer.domain.rules.ExcludeRule;
 import com.mranalizer.domain.rules.Rule;
 import com.mranalizer.domain.scoring.ScoringConfig;
 import com.mranalizer.domain.scoring.ScoringEngine;
@@ -133,7 +134,53 @@ public class ScoringSteps {
         mrBuilder.changedFiles(changedFiles);
     }
 
+    @Given("a merge request with no labels")
+    public void aMergeRequestWithNoLabels() {
+        mrBuilder = MergeRequest.builder()
+                .externalId("999")
+                .title("test MR")
+                .description("test description")
+                .author("test-author")
+                .diffStats(new DiffStats(10, 5, 5));
+    }
+
+    @Given("a merge request with no diff stats")
+    public void aMergeRequestWithNoDiffStats() {
+        mrBuilder = MergeRequest.builder()
+                .externalId("999")
+                .title("test MR")
+                .description("test description")
+                .author("test-author");
+    }
+
+    @Given("a merge request with no changed files")
+    public void aMergeRequestWithNoChangedFiles() {
+        mrBuilder = MergeRequest.builder()
+                .externalId("999")
+                .title("test MR")
+                .description("test description")
+                .author("test-author")
+                .diffStats(new DiffStats(10, 5, 5));
+    }
+
+    @And("the merge request has no diff stats")
+    public void theMergeRequestHasNoDiffStats() {
+        // Don't set diffStats on the builder — will default to DiffStats(0,0,0)
+    }
+
+    @And("the merge request has no changed files")
+    public void theMergeRequestHasNoChangedFiles() {
+        // Don't set changedFiles on the builder — will default to empty list
+    }
+
     // --- When steps ---
+
+    @When("the scoring engine evaluates it with label exclusion rules")
+    public void theScoringEngineEvaluatesItWithLabelExclusionRules() {
+        List<Rule> rules = List.of(ExcludeRule.byLabels(List.of("hotfix", "security", "emergency")));
+        MergeRequest mr = mrBuilder.build();
+        result = scoringEngine.evaluate(mr, rules, NO_LLM);
+    }
 
     @When("the scoring engine evaluates it")
     public void scoringEngineEvaluates() {
@@ -247,6 +294,11 @@ public class ScoringSteps {
         assertEquals(Verdict.valueOf(expectedVerdict), result.getVerdict());
     }
 
+    @Then("the verdict should not be null")
+    public void theVerdictShouldNotBeNull() {
+        assertNotNull(result.getVerdict());
+    }
+
     @Then("the verdict should be MAYBE or NOT_SUITABLE")
     public void verdictShouldBeMaybeOrNotSuitable() {
         assertTrue(result.getVerdict() == Verdict.MAYBE || result.getVerdict() == Verdict.NOT_SUITABLE,
@@ -355,7 +407,7 @@ public class ScoringSteps {
         return new Rule() {
             @Override
             public RuleResult evaluate(MergeRequest mr) {
-                boolean matched = mr.isHasTests();
+                boolean matched = mr.hasTests();
                 return new RuleResult("has-tests-boost", matched,
                         matched ? 0.1 : 0.0,
                         matched ? "merge request includes tests" : "no tests");

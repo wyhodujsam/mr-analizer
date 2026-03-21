@@ -21,6 +21,7 @@ import type {
   AnalysisRequest,
   AnalysisResponse,
 } from '../types';
+import { extractApiError } from '../utils/error';
 
 type Step = 'select' | 'browse' | 'analyzed';
 
@@ -57,7 +58,7 @@ export default function DashboardPage() {
       const repos = await getRepos();
       setSavedRepos(repos);
     } catch {
-      // silently ignore
+      setError('Nie udalo sie zaladowac listy repozytoriow.');
     }
   }
 
@@ -66,7 +67,7 @@ export default function DashboardPage() {
       const analyses = await getAnalyses();
       setAnalysisHistory(analyses);
     } catch {
-      // silently ignore
+      setError('Nie udalo sie zaladowac historii analiz.');
     }
   }, []);
 
@@ -85,16 +86,16 @@ export default function DashboardPage() {
         await addRepo(slug, provider);
         await loadRepos();
       } catch {
-        // silently ignore duplicates
+        // ignore duplicate repo errors
       }
     }
   }
 
   async function handleRepoDelete(id: number) {
+    const deleted = savedRepos.find((r) => r.id === id);
     try {
       await deleteRepo(id);
       await loadRepos();
-      const deleted = savedRepos.find((r) => r.id === id);
       if (deleted && deleted.projectSlug === selectedSlug) {
         setSelectedSlug('');
         setSelectedProvider('github');
@@ -132,7 +133,7 @@ export default function DashboardPage() {
       setSelectedMrIds(new Set(items.map(i => i.externalId)));
       setStep('browse');
     } catch (err: unknown) {
-      setError(extractError(err));
+      setError(extractApiError(err));
     } finally {
       setLoadingBrowse(false);
     }
@@ -154,7 +155,7 @@ export default function DashboardPage() {
       setStep('analyzed');
       await loadHistory();
     } catch (err: unknown) {
-      setError(extractError(err));
+      setError(extractApiError(err));
     } finally {
       setLoadingAnalyze(false);
     }
@@ -171,21 +172,6 @@ export default function DashboardPage() {
     } catch {
       setError('Nie udalo sie usunac analizy.');
     }
-  }
-
-  function extractError(err: unknown): string {
-    if (
-      err &&
-      typeof err === 'object' &&
-      'response' in err &&
-      err.response &&
-      typeof err.response === 'object' &&
-      'data' in err.response
-    ) {
-      const data = (err.response as { data?: { message?: string } }).data;
-      return data?.message ?? 'Wystapil nieoczekiwany blad.';
-    }
-    return 'Nie udalo sie polaczyc z serwerem.';
   }
 
   const summaryProps = analysisResponse

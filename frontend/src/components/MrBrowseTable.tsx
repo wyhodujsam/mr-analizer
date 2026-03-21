@@ -1,15 +1,11 @@
 import { Table, Badge, Form } from 'react-bootstrap';
 import type { MrBrowseItem } from '../types';
+import { formatDate } from '../utils/format';
 
 interface Props {
   items: MrBrowseItem[];
   selectedIds: Set<string>;
   onSelectionChange: (selectedIds: Set<string>) => void;
-}
-
-function formatDate(iso: string | null): string {
-  if (!iso) return '\u2014';
-  return new Date(iso).toLocaleDateString();
 }
 
 function stateVariant(state: string): string {

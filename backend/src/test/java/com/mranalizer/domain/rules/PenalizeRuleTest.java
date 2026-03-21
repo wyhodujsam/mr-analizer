@@ -107,6 +107,29 @@ class PenalizeRuleTest {
         }
     }
 
+    @Nested
+    @DisplayName("Null safety")
+    class NullSafety {
+
+        @Test
+        @DisplayName("byLargeDiff with null diffStats should not throw")
+        void byLargeDiff_withNullDiffStats_doesNotThrow() {
+            var rule = PenalizeRule.byLargeDiff(500, -0.15);
+            var mr = MergeRequest.builder().externalId("1").title("test").build();
+            var result = rule.evaluate(mr);
+            assertFalse(result.matched());
+        }
+
+        @Test
+        @DisplayName("byTouchesConfig with null changedFiles should not throw")
+        void byTouchesConfig_withNullChangedFiles_doesNotThrow() {
+            var rule = PenalizeRule.byTouchesConfig(List.of(".yml"), -0.05);
+            var mr = MergeRequest.builder().externalId("1").title("test").build();
+            var result = rule.evaluate(mr);
+            assertFalse(result.matched());
+        }
+    }
+
     private MergeRequest.Builder baseMrBuilder() {
         return MergeRequest.builder()
                 .externalId("test-1")

@@ -157,6 +157,38 @@ class ExcludeRuleTest {
         }
     }
 
+    @Nested
+    @DisplayName("Null safety")
+    class NullSafety {
+
+        @Test
+        @DisplayName("byLabels with null labels should not throw")
+        void byLabels_withNullLabels_doesNotThrow() {
+            var rule = ExcludeRule.byLabels(List.of("hotfix"));
+            var mr = MergeRequest.builder().externalId("1").title("test").build();
+            var result = rule.evaluate(mr);
+            assertFalse(result.matched());
+        }
+
+        @Test
+        @DisplayName("byMinChangedFiles with null diffStats should not throw")
+        void byMinChangedFiles_withNullDiffStats_doesNotThrow() {
+            var rule = ExcludeRule.byMinChangedFiles(2);
+            var mr = MergeRequest.builder().externalId("1").title("test").build();
+            var result = rule.evaluate(mr);
+            assertTrue(result.matched());
+        }
+
+        @Test
+        @DisplayName("byFileExtensionsOnly with null changedFiles should not throw")
+        void byFileExtensionsOnly_withNullChangedFiles_doesNotThrow() {
+            var rule = ExcludeRule.byFileExtensionsOnly(List.of(".yml"));
+            var mr = MergeRequest.builder().externalId("1").title("test").build();
+            var result = rule.evaluate(mr);
+            assertFalse(result.matched());
+        }
+    }
+
     private MergeRequest.Builder baseMrBuilder() {
         return MergeRequest.builder()
                 .externalId("test-1")

@@ -2,11 +2,15 @@ import { Badge } from 'react-bootstrap';
 import type { Verdict } from '../types';
 
 interface Props {
-  score: number;
-  verdict: Verdict;
+  score: number | null;
+  verdict: Verdict | null;
 }
 
 export default function ScoreBadge({ score, verdict }: Props) {
+  if (score == null || verdict == null) {
+    return <Badge bg="secondary">—</Badge>;
+  }
+
   const bg =
     verdict === 'AUTOMATABLE'
       ? 'success'

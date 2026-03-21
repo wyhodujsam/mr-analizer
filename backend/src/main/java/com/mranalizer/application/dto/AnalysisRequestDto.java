@@ -22,6 +22,7 @@ public record AnalysisRequestDto(
             throw new InvalidRequestException("projectSlug is required");
         }
         if (limit <= 0) limit = 100;
+        if (limit > 200) limit = 200;
         if (state == null || state.isBlank()) state = "merged";
         if (provider == null || provider.isBlank()) provider = "github";
         if (selectedMrIds == null) selectedMrIds = List.of();
