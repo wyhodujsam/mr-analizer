@@ -16,6 +16,11 @@ public class AnalysisResult {
     private final List<String> matchedRules;
     private final String llmComment;
     private final LocalDateTime analyzedAt;
+    private final int overallAutomatability;
+    private final List<AnalysisCategory> categories;
+    private final List<HumanOversightItem> humanOversightRequired;
+    private final List<String> whyLlmFriendly;
+    private final List<SummaryAspect> summaryTable;
 
     private AnalysisResult(Builder builder) {
         this.id = builder.id;
@@ -26,6 +31,11 @@ public class AnalysisResult {
         this.matchedRules = builder.matchedRules;
         this.llmComment = builder.llmComment;
         this.analyzedAt = builder.analyzedAt;
+        this.overallAutomatability = builder.overallAutomatability;
+        this.categories = builder.categories != null ? builder.categories : List.of();
+        this.humanOversightRequired = builder.humanOversightRequired != null ? builder.humanOversightRequired : List.of();
+        this.whyLlmFriendly = builder.whyLlmFriendly != null ? builder.whyLlmFriendly : List.of();
+        this.summaryTable = builder.summaryTable != null ? builder.summaryTable : List.of();
     }
 
     public Long getId() { return id; }
@@ -36,6 +46,15 @@ public class AnalysisResult {
     public List<String> getMatchedRules() { return matchedRules; }
     public String getLlmComment() { return llmComment; }
     public LocalDateTime getAnalyzedAt() { return analyzedAt; }
+    public int getOverallAutomatability() { return overallAutomatability; }
+    public List<AnalysisCategory> getCategories() { return categories; }
+    public List<HumanOversightItem> getHumanOversightRequired() { return humanOversightRequired; }
+    public List<String> getWhyLlmFriendly() { return whyLlmFriendly; }
+    public List<SummaryAspect> getSummaryTable() { return summaryTable; }
+
+    public boolean hasDetailedAnalysis() {
+        return overallAutomatability > 0 || !categories.isEmpty();
+    }
 
     public static Builder builder() {
         return new Builder();
@@ -50,6 +69,11 @@ public class AnalysisResult {
         private List<String> matchedRules;
         private String llmComment;
         private LocalDateTime analyzedAt;
+        private int overallAutomatability;
+        private List<AnalysisCategory> categories;
+        private List<HumanOversightItem> humanOversightRequired;
+        private List<String> whyLlmFriendly;
+        private List<SummaryAspect> summaryTable;
 
         private Builder() {}
 
@@ -61,6 +85,11 @@ public class AnalysisResult {
         public Builder matchedRules(List<String> matchedRules) { this.matchedRules = matchedRules; return this; }
         public Builder llmComment(String llmComment) { this.llmComment = llmComment; return this; }
         public Builder analyzedAt(LocalDateTime analyzedAt) { this.analyzedAt = analyzedAt; return this; }
+        public Builder overallAutomatability(int overallAutomatability) { this.overallAutomatability = overallAutomatability; return this; }
+        public Builder categories(List<AnalysisCategory> categories) { this.categories = categories; return this; }
+        public Builder humanOversightRequired(List<HumanOversightItem> humanOversightRequired) { this.humanOversightRequired = humanOversightRequired; return this; }
+        public Builder whyLlmFriendly(List<String> whyLlmFriendly) { this.whyLlmFriendly = whyLlmFriendly; return this; }
+        public Builder summaryTable(List<SummaryAspect> summaryTable) { this.summaryTable = summaryTable; return this; }
 
         public AnalysisResult build() {
             return new AnalysisResult(this);

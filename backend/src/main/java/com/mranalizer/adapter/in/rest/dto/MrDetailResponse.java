@@ -1,7 +1,6 @@
 package com.mranalizer.adapter.in.rest.dto;
 
-import com.mranalizer.domain.model.AnalysisResult;
-import com.mranalizer.domain.model.MergeRequest;
+import com.mranalizer.domain.model.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,7 +27,13 @@ public record MrDetailResponse(
         List<String> matchedRules,
         String llmComment,
         String url,
-        List<ScoreBreakdownEntry> scoreBreakdown
+        List<ScoreBreakdownEntry> scoreBreakdown,
+        int overallAutomatability,
+        List<AnalysisCategory> categories,
+        List<HumanOversightItem> humanOversightRequired,
+        List<String> whyLlmFriendly,
+        List<SummaryAspect> summaryTable,
+        boolean hasDetailedAnalysis
 ) {
 
     public record ScoreBreakdownEntry(
@@ -76,7 +81,13 @@ public record MrDetailResponse(
                 result.getMatchedRules(),
                 result.getLlmComment(),
                 mr.getUrl(),
-                breakdown
+                breakdown,
+                result.getOverallAutomatability(),
+                result.getCategories(),
+                result.getHumanOversightRequired(),
+                result.getWhyLlmFriendly(),
+                result.getSummaryTable(),
+                result.hasDetailedAnalysis()
         );
     }
 

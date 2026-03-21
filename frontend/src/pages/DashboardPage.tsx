@@ -25,35 +25,28 @@ import type {
 type Step = 'select' | 'browse' | 'analyzed';
 
 export default function DashboardPage() {
-  // Repo selection
   const [savedRepos, setSavedRepos] = useState<SavedRepository[]>([]);
   const [selectedSlug, setSelectedSlug] = useState('');
   const [selectedProvider, setSelectedProvider] = useState('github');
 
-  // Browse form
   const [targetBranch, setTargetBranch] = useState('');
   const [after, setAfter] = useState('');
   const [before, setBefore] = useState('');
   const [limit, setLimit] = useState(100);
   const [useLlm, setUseLlm] = useState(false);
 
-  // MR selection
   const [selectedMrIds, setSelectedMrIds] = useState<Set<string>>(new Set());
 
-  // State machine
   const [step, setStep] = useState<Step>('select');
   const [browsedMrs, setBrowsedMrs] = useState<MrBrowseItem[]>([]);
   const [analysisResponse, setAnalysisResponse] = useState<AnalysisResponse | null>(null);
 
-  // History
   const [analysisHistory, setAnalysisHistory] = useState<AnalysisResponse[]>([]);
 
-  // Loading & error
   const [loadingBrowse, setLoadingBrowse] = useState(false);
   const [loadingAnalyze, setLoadingAnalyze] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load repos and history on mount
   useEffect(() => {
     loadRepos();
     loadHistory();
@@ -84,7 +77,6 @@ export default function DashboardPage() {
     setBrowsedMrs([]);
     setAnalysisResponse(null);
 
-    // Save to backend if not already saved
     const exists = savedRepos.find(
       (r) => r.projectSlug === slug && r.provider === provider
     );
@@ -102,7 +94,6 @@ export default function DashboardPage() {
     try {
       await deleteRepo(id);
       await loadRepos();
-      // If deleted repo was selected, clear selection
       const deleted = savedRepos.find((r) => r.id === id);
       if (deleted && deleted.projectSlug === selectedSlug) {
         setSelectedSlug('');
@@ -173,7 +164,6 @@ export default function DashboardPage() {
     try {
       await deleteAnalysis(reportId);
       await loadHistory();
-      // If currently viewing this analysis, reset
       if (analysisResponse?.reportId === reportId) {
         setAnalysisResponse(null);
         setStep(browsedMrs.length > 0 ? 'browse' : 'select');
@@ -198,7 +188,6 @@ export default function DashboardPage() {
     return 'Nie udalo sie polaczyc z serwerem.';
   }
 
-  // Compute summary stats
   const summaryProps = analysisResponse
     ? {
         totalMrs: analysisResponse.totalMrs,
@@ -228,9 +217,8 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h2 className="mb-4">MR Analysis Dashboard</h2>
+      <h2 className="mb-4">Analiza MR</h2>
 
-      {/* Step 1: Repo selection */}
       <RepoSelector
         savedRepos={savedRepos}
         onSelect={handleRepoSelect}
@@ -239,7 +227,6 @@ export default function DashboardPage() {
         selectedProvider={selectedProvider}
       />
 
-      {/* Browse form */}
       {selectedSlug && (
         <>
           <hr className="step-separator" />
@@ -247,7 +234,7 @@ export default function DashboardPage() {
             <Row className="mb-3 g-2">
               <Col md={3}>
                 <Form.Group controlId="targetBranch">
-                  <Form.Label>Target Branch</Form.Label>
+                  <Form.Label>Branch docelowy</Form.Label>
                   <Form.Control
                     type="text"
                     placeholder="main"
@@ -328,7 +315,6 @@ export default function DashboardPage() {
         </Alert>
       )}
 
-      {/* Step 2: Browse results */}
       {step === 'browse' && browsedMrs.length > 0 && (
         <div className="mt-3">
           <div className="d-flex justify-content-between align-items-center mb-3">
@@ -364,7 +350,6 @@ export default function DashboardPage() {
         </Alert>
       )}
 
-      {/* Step 3: Analysis results (replaces browse table) */}
       {step === 'analyzed' && analysisResponse && summaryProps && (
         <div className="mt-4">
           <Row>
@@ -396,7 +381,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Analysis History */}
       <hr className="step-separator mt-4" />
       <AnalysisHistory analyses={analysisHistory} onDelete={handleHistoryDelete} />
     </div>

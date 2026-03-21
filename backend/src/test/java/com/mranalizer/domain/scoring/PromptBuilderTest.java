@@ -66,9 +66,9 @@ class PromptBuilderTest {
         String result = promptBuilder.build(null, mr);
 
         assertTrue(result.contains("Fix login bug"));
-        assertTrue(result.contains("Analyze this Pull Request"));
-        assertTrue(result.contains("Source branch: feature/login-fix"));
-        assertTrue(result.contains("Target branch: main"));
+        assertTrue(result.contains("Przeanalizuj tego Pull Requesta"));
+        assertTrue(result.contains("Branch zrodlowy: feature/login-fix"));
+        assertTrue(result.contains("Branch docelowy: main"));
     }
 
     @Test
@@ -78,7 +78,7 @@ class PromptBuilderTest {
         String result = promptBuilder.build("   ", mr);
 
         assertTrue(result.contains("Fix login bug"));
-        assertTrue(result.contains("Analyze this Pull Request"));
+        assertTrue(result.contains("Przeanalizuj tego Pull Requesta"));
     }
 
     @Test

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Table, Button, Form } from 'react-bootstrap';
 import ScoreBadge from './ScoreBadge';
 import type { AnalysisResponse, Verdict } from '../types';
@@ -19,6 +20,7 @@ interface FlatRow {
   score: number;
   verdict: Verdict;
   url: string;
+  hasDetailedAnalysis: boolean;
 }
 
 function formatDate(iso: string): string {
@@ -28,8 +30,8 @@ function formatDate(iso: string): string {
 function verdictLabel(v: Verdict): string {
   switch (v) {
     case 'AUTOMATABLE': return 'Auto';
-    case 'MAYBE': return 'Maybe';
-    case 'NOT_SUITABLE': return 'Not Suit.';
+    case 'MAYBE': return 'Moze';
+    case 'NOT_SUITABLE': return 'Nie';
   }
 }
 
@@ -42,6 +44,7 @@ function verdictClass(v: Verdict): string {
 }
 
 export default function AnalysisHistory({ analyses, onDelete }: Props) {
+  const navigate = useNavigate();
   const [filterRepo, setFilterRepo] = useState<string>('all');
 
   function handleDelete(e: React.MouseEvent, reportId: number) {
@@ -55,10 +58,8 @@ export default function AnalysisHistory({ analyses, onDelete }: Props) {
     return null;
   }
 
-  // Extract unique repos
   const repos = [...new Set(analyses.map(a => a.projectSlug))];
 
-  // Flatten analyses into per-PR rows
   const rows: FlatRow[] = analyses.flatMap(a =>
     a.results.map(r => ({
       reportId: a.reportId,
@@ -68,18 +69,15 @@ export default function AnalysisHistory({ analyses, onDelete }: Props) {
     }))
   );
 
-  // Filter by selected repo
   const filteredRows = filterRepo === 'all'
     ? rows
     : rows.filter(r => r.projectSlug === filterRepo);
 
-  // Detect reports with multiple results for grouping indicator
   const reportResultCounts = new Map<number, number>();
   for (const a of analyses) {
     reportResultCounts.set(a.reportId, a.results.length);
   }
 
-  // Track which reportIds we've seen to show grouped indicator on first row
   const seenReports = new Set<number>();
 
   return (
@@ -110,8 +108,8 @@ export default function AnalysisHistory({ analyses, onDelete }: Props) {
             <th>PR #</th>
             <th>Tytul</th>
             <th>Autor</th>
-            <th>Score</th>
-            <th>Verdict</th>
+            <th>Wynik</th>
+            <th>Werdykt</th>
             <th></th>
           </tr>
         </thead>
@@ -125,7 +123,9 @@ export default function AnalysisHistory({ analyses, onDelete }: Props) {
               <tr
                 key={`${r.reportId}-${r.id}`}
                 className={`clickable-row ${isGrouped ? 'verdict-' + (r.verdict === 'NOT_SUITABLE' ? 'not-suitable' : r.verdict.toLowerCase()) : ''}`}
-                onClick={() => window.open(r.url, '_blank')}
+                onClick={() => navigate(r.hasDetailedAnalysis
+                  ? `/analysis/${r.reportId}/${r.id}`
+                  : `/mr/${r.reportId}/${r.id}`)}
               >
                 <td className="text-muted">
                   {formatDate(r.analyzedAt)}

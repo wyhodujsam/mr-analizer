@@ -2,8 +2,7 @@ package com.mranalizer.adapter.out.llm;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mranalizer.domain.model.LlmAssessment;
-import com.mranalizer.domain.model.MergeRequest;
+import com.mranalizer.domain.model.*;;
 import com.mranalizer.domain.port.out.LlmAnalyzer;
 import com.mranalizer.domain.scoring.PromptBuilder;
 import jakarta.annotation.PostConstruct;
@@ -14,6 +13,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Component
@@ -73,7 +74,7 @@ public class ClaudeCliAdapter implements LlmAnalyzer {
 
         try {
             Process process = new ProcessBuilder(command, "-p", prompt, "--output-format", "json")
-                    .redirectErrorStream(true)
+                    .redirectInput(ProcessBuilder.Redirect.from(new java.io.File("/dev/null")))
                     .start();
 
             boolean finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
@@ -130,7 +131,17 @@ public class ClaudeCliAdapter implements LlmAnalyzer {
                 // Clamp score to valid range
                 score = Math.max(-0.5, Math.min(0.5, score));
 
-                return new LlmAssessment(score, comment, PROVIDER);
+                // Parse detailed analysis fields (all optional)
+                int overallAutomatability = parsed.has("overallAutomatability")
+                        ? parsed.get("overallAutomatability").asInt(0) : 0;
+
+                List<AnalysisCategory> categories = parseCategories(parsed);
+                List<HumanOversightItem> humanOversight = parseHumanOversight(parsed);
+                List<String> whyLlmFriendly = parseStringArray(parsed, "whyLlmFriendly");
+                List<SummaryAspect> summaryTable = parseSummaryTable(parsed);
+
+                return new LlmAssessment(score, comment, PROVIDER,
+                        overallAutomatability, categories, humanOversight, whyLlmFriendly, summaryTable);
             }
 
             log.warn("Could not find JSON in Claude CLI response: {}", rawOutput);
@@ -140,5 +151,54 @@ public class ClaudeCliAdapter implements LlmAnalyzer {
             log.warn("Failed to parse Claude CLI response: {}", e.getMessage());
             return new LlmAssessment(0.0, "LLM error: " + e.getMessage(), PROVIDER);
         }
+    }
+
+    private List<AnalysisCategory> parseCategories(JsonNode parsed) {
+        if (!parsed.has("categories") || !parsed.get("categories").isArray()) return List.of();
+        List<AnalysisCategory> result = new ArrayList<>();
+        for (JsonNode node : parsed.get("categories")) {
+            result.add(new AnalysisCategory(
+                    node.has("name") ? node.get("name").asText() : "",
+                    node.has("score") ? node.get("score").asInt(0) : 0,
+                    node.has("reasoning") ? node.get("reasoning").asText() : ""
+            ));
+        }
+        return result;
+    }
+
+    private List<HumanOversightItem> parseHumanOversight(JsonNode parsed) {
+        if (!parsed.has("humanOversightRequired") || !parsed.get("humanOversightRequired").isArray()) return List.of();
+        List<HumanOversightItem> result = new ArrayList<>();
+        for (JsonNode node : parsed.get("humanOversightRequired")) {
+            result.add(new HumanOversightItem(
+                    node.has("area") ? node.get("area").asText() : "",
+                    node.has("reasoning") ? node.get("reasoning").asText() : ""
+            ));
+        }
+        return result;
+    }
+
+    private List<String> parseStringArray(JsonNode parsed, String field) {
+        if (!parsed.has(field) || !parsed.get(field).isArray()) return List.of();
+        List<String> result = new ArrayList<>();
+        for (JsonNode node : parsed.get(field)) {
+            result.add(node.asText());
+        }
+        return result;
+    }
+
+    private List<SummaryAspect> parseSummaryTable(JsonNode parsed) {
+        if (!parsed.has("summaryTable") || !parsed.get("summaryTable").isArray()) return List.of();
+        List<SummaryAspect> result = new ArrayList<>();
+        for (JsonNode node : parsed.get("summaryTable")) {
+            Integer score = node.has("score") && !node.get("score").isNull()
+                    ? node.get("score").asInt() : null;
+            result.add(new SummaryAspect(
+                    node.has("aspect") ? node.get("aspect").asText() : "",
+                    score,
+                    node.has("note") ? node.get("note").asText() : ""
+            ));
+        }
+        return result;
     }
 }

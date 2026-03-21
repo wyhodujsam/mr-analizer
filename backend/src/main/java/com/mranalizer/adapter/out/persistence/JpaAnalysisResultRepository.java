@@ -5,10 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mranalizer.adapter.out.persistence.entity.AnalysisReportEntity;
 import com.mranalizer.adapter.out.persistence.entity.AnalysisResultEntity;
-import com.mranalizer.domain.model.AnalysisReport;
-import com.mranalizer.domain.model.AnalysisResult;
-import com.mranalizer.domain.model.MergeRequest;
-import com.mranalizer.domain.model.Verdict;
+import com.mranalizer.domain.model.*;
 import com.mranalizer.domain.port.out.AnalysisResultRepository;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -30,6 +27,9 @@ public class JpaAnalysisResultRepository implements AnalysisResultRepository {
     private final ObjectMapper objectMapper;
 
     private static final TypeReference<List<String>> LIST_OF_STRING = new TypeReference<>() {};
+    private static final TypeReference<List<AnalysisCategory>> LIST_OF_CATEGORY = new TypeReference<>() {};
+    private static final TypeReference<List<HumanOversightItem>> LIST_OF_OVERSIGHT = new TypeReference<>() {};
+    private static final TypeReference<List<SummaryAspect>> LIST_OF_SUMMARY = new TypeReference<>() {};
 
     public JpaAnalysisResultRepository(SpringDataAnalysisResultRepository springRepo,
                                        ObjectMapper objectMapper) {
@@ -103,6 +103,11 @@ public class JpaAnalysisResultRepository implements AnalysisResultRepository {
         entity.setLlmComment(result.getLlmComment());
         entity.setAnalyzedAt(result.getAnalyzedAt());
         entity.setReport(reportEntity);
+        entity.setOverallAutomatability(result.getOverallAutomatability());
+        entity.setCategories(toJsonGeneric(result.getCategories()));
+        entity.setHumanOversightRequired(toJsonGeneric(result.getHumanOversightRequired()));
+        entity.setWhyLlmFriendly(toJson(result.getWhyLlmFriendly()));
+        entity.setSummaryTable(toJsonGeneric(result.getSummaryTable()));
 
         MergeRequest mr = result.getMergeRequest();
         if (mr != null) {
@@ -112,6 +117,19 @@ public class JpaAnalysisResultRepository implements AnalysisResultRepository {
             entity.setProjectSlug(mr.getProjectSlug());
             entity.setProvider(mr.getProvider());
             entity.setMrUrl(mr.getUrl());
+            entity.setMrDescription(mr.getDescription());
+            entity.setMrSourceBranch(mr.getSourceBranch());
+            entity.setMrTargetBranch(mr.getTargetBranch());
+            entity.setMrState(mr.getState());
+            entity.setMrCreatedAt(mr.getCreatedAt());
+            entity.setMrMergedAt(mr.getMergedAt());
+            entity.setMrLabels(toJson(mr.getLabels()));
+            entity.setMrHasTests(mr.isHasTests());
+            if (mr.getDiffStats() != null) {
+                entity.setMrAdditions(mr.getDiffStats().additions());
+                entity.setMrDeletions(mr.getDiffStats().deletions());
+                entity.setMrChangedFilesCount(mr.getDiffStats().changedFilesCount());
+            }
         }
 
         return entity;
@@ -145,6 +163,15 @@ public class JpaAnalysisResultRepository implements AnalysisResultRepository {
                 .projectSlug(entity.getProjectSlug())
                 .provider(entity.getProvider())
                 .url(entity.getMrUrl())
+                .description(entity.getMrDescription())
+                .sourceBranch(entity.getMrSourceBranch())
+                .targetBranch(entity.getMrTargetBranch())
+                .state(entity.getMrState())
+                .createdAt(entity.getMrCreatedAt())
+                .mergedAt(entity.getMrMergedAt())
+                .labels(fromJson(entity.getMrLabels()))
+                .hasTests(entity.isMrHasTests())
+                .diffStats(new DiffStats(entity.getMrAdditions(), entity.getMrDeletions(), entity.getMrChangedFilesCount()))
                 .build();
 
         Verdict verdict = null;
@@ -161,6 +188,11 @@ public class JpaAnalysisResultRepository implements AnalysisResultRepository {
                 .matchedRules(fromJson(entity.getMatchedRules()))
                 .llmComment(entity.getLlmComment())
                 .analyzedAt(entity.getAnalyzedAt())
+                .overallAutomatability(entity.getOverallAutomatability() != null ? entity.getOverallAutomatability() : 0)
+                .categories(fromJsonGeneric(entity.getCategories(), LIST_OF_CATEGORY))
+                .humanOversightRequired(fromJsonGeneric(entity.getHumanOversightRequired(), LIST_OF_OVERSIGHT))
+                .whyLlmFriendly(fromJson(entity.getWhyLlmFriendly()))
+                .summaryTable(fromJsonGeneric(entity.getSummaryTable(), LIST_OF_SUMMARY))
                 .build();
     }
 
@@ -183,6 +215,24 @@ public class JpaAnalysisResultRepository implements AnalysisResultRepository {
             return objectMapper.readValue(json, LIST_OF_STRING);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Failed to deserialize JSON to list", e);
+        }
+    }
+
+    private <T> String toJsonGeneric(List<T> list) {
+        if (list == null || list.isEmpty()) return null;
+        try {
+            return objectMapper.writeValueAsString(list);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Failed to serialize to JSON", e);
+        }
+    }
+
+    private <T> List<T> fromJsonGeneric(String json, TypeReference<List<T>> typeRef) {
+        if (json == null || json.isBlank()) return List.of();
+        try {
+            return objectMapper.readValue(json, typeRef);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Failed to deserialize JSON", e);
         }
     }
 }

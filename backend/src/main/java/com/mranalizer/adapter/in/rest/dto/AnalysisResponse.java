@@ -29,7 +29,8 @@ public record AnalysisResponse(
             List<String> reasons,
             List<String> matchedRules,
             String llmComment,
-            String url
+            String url,
+            boolean hasDetailedAnalysis
     ) {
         public static ResultItem from(AnalysisResult r) {
             return new ResultItem(
@@ -42,7 +43,8 @@ public record AnalysisResponse(
                     r.getReasons(),
                     r.getMatchedRules(),
                     r.getLlmComment(),
-                    r.getMergeRequest().getUrl()
+                    r.getMergeRequest().getUrl(),
+                    r.hasDetailedAnalysis()
             );
         }
     }

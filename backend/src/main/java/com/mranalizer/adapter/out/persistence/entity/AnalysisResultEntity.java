@@ -31,6 +31,36 @@ public class AnalysisResultEntity {
     private LocalDateTime analyzedAt;
     private String mrUrl;
 
+    // MR metadata fields
+    @Column(columnDefinition = "TEXT")
+    private String mrDescription;
+    private String mrSourceBranch;
+    private String mrTargetBranch;
+    private String mrState;
+    private LocalDateTime mrCreatedAt;
+    private LocalDateTime mrMergedAt;
+    @Column(columnDefinition = "TEXT")
+    private String mrLabels;
+    private int mrAdditions;
+    private int mrDeletions;
+    private int mrChangedFilesCount;
+    private boolean mrHasTests;
+
+    // Detailed LLM analysis fields
+    private Integer overallAutomatability;
+
+    @Column(columnDefinition = "TEXT")
+    private String categories;
+
+    @Column(columnDefinition = "TEXT")
+    private String humanOversightRequired;
+
+    @Column(columnDefinition = "TEXT")
+    private String whyLlmFriendly;
+
+    @Column(columnDefinition = "TEXT")
+    private String summaryTable;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "report_id")
     private AnalysisReportEntity report;
@@ -75,6 +105,54 @@ public class AnalysisResultEntity {
 
     public String getMrUrl() { return mrUrl; }
     public void setMrUrl(String mrUrl) { this.mrUrl = mrUrl; }
+
+    public String getMrDescription() { return mrDescription; }
+    public void setMrDescription(String mrDescription) { this.mrDescription = mrDescription; }
+
+    public String getMrSourceBranch() { return mrSourceBranch; }
+    public void setMrSourceBranch(String mrSourceBranch) { this.mrSourceBranch = mrSourceBranch; }
+
+    public String getMrTargetBranch() { return mrTargetBranch; }
+    public void setMrTargetBranch(String mrTargetBranch) { this.mrTargetBranch = mrTargetBranch; }
+
+    public String getMrState() { return mrState; }
+    public void setMrState(String mrState) { this.mrState = mrState; }
+
+    public LocalDateTime getMrCreatedAt() { return mrCreatedAt; }
+    public void setMrCreatedAt(LocalDateTime mrCreatedAt) { this.mrCreatedAt = mrCreatedAt; }
+
+    public LocalDateTime getMrMergedAt() { return mrMergedAt; }
+    public void setMrMergedAt(LocalDateTime mrMergedAt) { this.mrMergedAt = mrMergedAt; }
+
+    public String getMrLabels() { return mrLabels; }
+    public void setMrLabels(String mrLabels) { this.mrLabels = mrLabels; }
+
+    public int getMrAdditions() { return mrAdditions; }
+    public void setMrAdditions(int mrAdditions) { this.mrAdditions = mrAdditions; }
+
+    public int getMrDeletions() { return mrDeletions; }
+    public void setMrDeletions(int mrDeletions) { this.mrDeletions = mrDeletions; }
+
+    public int getMrChangedFilesCount() { return mrChangedFilesCount; }
+    public void setMrChangedFilesCount(int mrChangedFilesCount) { this.mrChangedFilesCount = mrChangedFilesCount; }
+
+    public boolean isMrHasTests() { return mrHasTests; }
+    public void setMrHasTests(boolean mrHasTests) { this.mrHasTests = mrHasTests; }
+
+    public Integer getOverallAutomatability() { return overallAutomatability; }
+    public void setOverallAutomatability(Integer overallAutomatability) { this.overallAutomatability = overallAutomatability; }
+
+    public String getCategories() { return categories; }
+    public void setCategories(String categories) { this.categories = categories; }
+
+    public String getHumanOversightRequired() { return humanOversightRequired; }
+    public void setHumanOversightRequired(String humanOversightRequired) { this.humanOversightRequired = humanOversightRequired; }
+
+    public String getWhyLlmFriendly() { return whyLlmFriendly; }
+    public void setWhyLlmFriendly(String whyLlmFriendly) { this.whyLlmFriendly = whyLlmFriendly; }
+
+    public String getSummaryTable() { return summaryTable; }
+    public void setSummaryTable(String summaryTable) { this.summaryTable = summaryTable; }
 
     public AnalysisReportEntity getReport() { return report; }
     public void setReport(AnalysisReportEntity report) { this.report = report; }
