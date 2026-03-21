@@ -2,6 +2,7 @@ package com.mranalizer.adapter.out.provider.github;
 
 import com.mranalizer.adapter.out.provider.github.dto.GitHubFile;
 import com.mranalizer.adapter.out.provider.github.dto.GitHubPullRequest;
+import com.mranalizer.domain.exception.InvalidRequestException;
 import com.mranalizer.domain.model.FetchCriteria;
 import com.mranalizer.domain.model.MergeRequest;
 import com.mranalizer.domain.port.out.MergeRequestProvider;
@@ -42,7 +43,7 @@ public class GitHubAdapter implements MergeRequestProvider {
 
         log.info("Fetching PRs from GitHub: {}/{} state={} limit={}", owner, repo, apiState, criteria.getLimit());
 
-        List<GitHubPullRequest> prs = client.fetchPullRequests(owner, repo, apiState, perPage);
+        List<GitHubPullRequest> prs = client.fetchPullRequests(owner, repo, apiState, perPage, criteria.getLimit());
 
         return prs.stream()
                 .filter(pr -> matchesDateFilter(pr, criteria.getAfter(), criteria.getBefore()))
@@ -60,7 +61,12 @@ public class GitHubAdapter implements MergeRequestProvider {
         String[] parts = parseOwnerRepo(projectSlug);
         String owner = parts[0];
         String repo = parts[1];
-        int number = Integer.parseInt(mrId);
+        int number;
+        try {
+            number = Integer.parseInt(mrId);
+        } catch (NumberFormatException e) {
+            throw new InvalidRequestException("Invalid MR ID (not a number): " + mrId);
+        }
 
         GitHubPullRequest pr = client.fetchPullRequest(owner, repo, number);
         List<GitHubFile> files = client.fetchFiles(owner, repo, number);

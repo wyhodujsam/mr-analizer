@@ -39,12 +39,11 @@ public class AnalysisRestController {
     @GetMapping("/analysis")
     public ResponseEntity<List<AnalysisResponse>> listReports(
             @RequestParam(required = false) String projectSlug) {
-        List<AnalysisReport> reports = getAnalysisResultsUseCase.getAllReports();
-
+        List<AnalysisReport> reports;
         if (projectSlug != null && !projectSlug.isBlank()) {
-            reports = reports.stream()
-                    .filter(r -> projectSlug.equals(r.getProjectSlug()))
-                    .collect(Collectors.toList());
+            reports = getAnalysisResultsUseCase.getReportsByProjectSlug(projectSlug);
+        } else {
+            reports = getAnalysisResultsUseCase.getAllReports();
         }
 
         List<AnalysisResponse> response = reports.stream()

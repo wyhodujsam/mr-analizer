@@ -1,6 +1,7 @@
 package com.mranalizer.domain.port.out;
 
 import com.mranalizer.domain.model.AnalysisReport;
+import com.mranalizer.domain.model.AnalysisResult;
 
 import java.util.List;
 import java.util.Optional;
@@ -28,4 +29,10 @@ public interface AnalysisResultRepository {
 
     /** Deletes a report by its ID. */
     void deleteById(Long id);
+
+    /** Returns a single result by report ID and result ID, or empty if not found. */
+    Optional<AnalysisResult> findResult(Long reportId, Long resultId);
+
+    /** Returns all reports matching the given project slug. */
+    List<AnalysisReport> findByProjectSlug(String projectSlug);
 }

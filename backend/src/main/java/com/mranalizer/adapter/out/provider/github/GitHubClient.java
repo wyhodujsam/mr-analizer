@@ -2,14 +2,19 @@ package com.mranalizer.adapter.out.provider.github;
 
 import com.mranalizer.adapter.out.provider.github.dto.GitHubFile;
 import com.mranalizer.adapter.out.provider.github.dto.GitHubPullRequest;
+import com.mranalizer.domain.exception.ProviderAuthException;
+import com.mranalizer.domain.exception.ProviderException;
 import com.mranalizer.domain.exception.ProviderRateLimitException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,16 +44,22 @@ public class GitHubClient {
         this.webClient = builder.build();
     }
 
-    public List<GitHubPullRequest> fetchPullRequests(String owner, String repo, String state, int perPage) {
+    public List<GitHubPullRequest> fetchPullRequests(String owner, String repo, String state, int perPage, int limit) {
         List<GitHubPullRequest> allPrs = new ArrayList<>();
-        String url = String.format("/repos/%s/%s/pulls?state=%s&per_page=%d&page=1", owner, repo, state, perPage);
+        String url = UriComponentsBuilder.fromPath("/repos/{owner}/{repo}/pulls")
+                .queryParam("state", state)
+                .queryParam("per_page", perPage)
+                .queryParam("page", 1)
+                .buildAndExpand(owner, repo)
+                .toUriString();
 
         while (url != null) {
-            var response = webClient.get()
-                    .uri(url)
+            final String currentUrl = url;
+            var response = executeWithErrorHandling(() -> webClient.get()
+                    .uri(currentUrl)
                     .retrieve()
                     .toEntityList(GitHubPullRequest.class)
-                    .block();
+                    .block());
 
             if (response == null) {
                 break;
@@ -61,6 +72,11 @@ public class GitHubClient {
                 allPrs.addAll(body);
             }
 
+            // Stop pagination once we have enough PRs
+            if (allPrs.size() >= limit) {
+                break;
+            }
+
             url = parseNextLink(response.getHeaders());
         }
 
@@ -68,15 +84,17 @@ public class GitHubClient {
     }
 
     public GitHubPullRequest fetchPullRequest(String owner, String repo, int number) {
-        String url = String.format("/repos/%s/%s/pulls/%d", owner, repo, number);
-        var response = webClient.get()
+        String url = UriComponentsBuilder.fromPath("/repos/{owner}/{repo}/pulls/{number}")
+                .buildAndExpand(owner, repo, number)
+                .toUriString();
+        var response = executeWithErrorHandling(() -> webClient.get()
                 .uri(url)
                 .retrieve()
                 .toEntity(GitHubPullRequest.class)
-                .block();
+                .block());
 
         if (response == null || response.getBody() == null) {
-            throw new java.util.NoSuchElementException("PR #" + number + " not found in " + owner + "/" + repo);
+            throw new ProviderException("PR #" + number + " not found in " + owner + "/" + repo);
         }
         checkRateLimit(response.getHeaders());
         return response.getBody();
@@ -84,14 +102,19 @@ public class GitHubClient {
 
     public List<GitHubFile> fetchFiles(String owner, String repo, int number) {
         List<GitHubFile> allFiles = new ArrayList<>();
-        String url = String.format("/repos/%s/%s/pulls/%d/files?per_page=100&page=1", owner, repo, number);
+        String url = UriComponentsBuilder.fromPath("/repos/{owner}/{repo}/pulls/{number}/files")
+                .queryParam("per_page", 100)
+                .queryParam("page", 1)
+                .buildAndExpand(owner, repo, number)
+                .toUriString();
 
         while (url != null) {
-            var response = webClient.get()
-                    .uri(url)
+            final String currentUrl = url;
+            var response = executeWithErrorHandling(() -> webClient.get()
+                    .uri(currentUrl)
                     .retrieve()
                     .toEntityList(GitHubFile.class)
-                    .block();
+                    .block());
 
             if (response == null) {
                 break;
@@ -108,6 +131,24 @@ public class GitHubClient {
         }
 
         return allFiles;
+    }
+
+    private <T> T executeWithErrorHandling(java.util.function.Supplier<T> request) {
+        try {
+            return request.get();
+        } catch (WebClientResponseException e) {
+            HttpStatusCode status = e.getStatusCode();
+            if (status.value() == 401 || status.value() == 403) {
+                throw new ProviderAuthException("GitHub API authentication failed: " + status.value());
+            }
+            if (status.value() == 429) {
+                throw new ProviderRateLimitException("GitHub API rate limit exceeded");
+            }
+            if (status.value() == 404) {
+                throw new ProviderException("GitHub resource not found: " + e.getMessage());
+            }
+            throw new ProviderException("GitHub API error " + status.value() + ": " + e.getMessage());
+        }
     }
 
     private void checkRateLimit(HttpHeaders headers) {
@@ -136,7 +177,6 @@ public class GitHubClient {
             Matcher matcher = LINK_NEXT_PATTERN.matcher(linkHeader);
             if (matcher.find()) {
                 String nextUrl = matcher.group(1);
-                // If it's a full URL, extract the path+query portion
                 if (nextUrl.startsWith("http")) {
                     int idx = nextUrl.indexOf("/repos/");
                     if (idx >= 0) {

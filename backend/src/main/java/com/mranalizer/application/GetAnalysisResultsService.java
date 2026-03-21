@@ -30,9 +30,11 @@ public class GetAnalysisResultsService implements GetAnalysisResultsUseCase {
 
     @Override
     public Optional<AnalysisResult> getResult(Long reportId, Long resultId) {
-        return repository.findById(reportId)
-                .flatMap(report -> report.getResults().stream()
-                        .filter(r -> resultId.equals(r.getId()))
-                        .findFirst());
+        return repository.findResult(reportId, resultId);
+    }
+
+    @Override
+    public List<AnalysisReport> getReportsByProjectSlug(String projectSlug) {
+        return repository.findByProjectSlug(projectSlug);
     }
 }

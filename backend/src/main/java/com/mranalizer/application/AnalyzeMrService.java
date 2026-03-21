@@ -9,11 +9,15 @@ import com.mranalizer.domain.port.out.LlmAnalyzer;
 import com.mranalizer.domain.port.out.MergeRequestProvider;
 import com.mranalizer.domain.rules.Rule;
 import com.mranalizer.domain.scoring.ScoringEngine;
+import jakarta.annotation.PreDestroy;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Service
 public class AnalyzeMrService implements AnalyzeMrUseCase {
@@ -24,6 +28,7 @@ public class AnalyzeMrService implements AnalyzeMrUseCase {
     private final ScoringEngine scoringEngine;
     private final List<Rule> rules;
     private final ManageReposUseCase manageReposUseCase;
+    private final ExecutorService llmExecutor = Executors.newFixedThreadPool(3);
 
     public AnalyzeMrService(MergeRequestProvider provider,
                             LlmAnalyzer llmAnalyzer,
@@ -55,21 +60,32 @@ public class AnalyzeMrService implements AnalyzeMrUseCase {
             mergeRequests = provider.fetchMergeRequests(criteria);
         }
 
-        List<AnalysisResult> results = new ArrayList<>();
-        for (MergeRequest mr : mergeRequests) {
-            LlmAssessment llmAssessment;
-            if (useLlm) {
-                try {
-                    llmAssessment = llmAnalyzer.analyze(mr);
-                } catch (Exception e) {
-                    llmAssessment = new LlmAssessment(0.0, "LLM error: " + e.getMessage(), "error");
-                }
-            } else {
-                llmAssessment = new LlmAssessment(0.0, null, "none");
-            }
+        List<AnalysisResult> results;
+        if (useLlm) {
+            // Parallel LLM analysis (max 3 concurrent)
+            List<CompletableFuture<AnalysisResult>> futures = mergeRequests.stream()
+                    .map(mr -> CompletableFuture.supplyAsync(() -> {
+                        LlmAssessment llmAssessment;
+                        try {
+                            llmAssessment = llmAnalyzer.analyze(mr);
+                        } catch (Exception e) {
+                            llmAssessment = new LlmAssessment(0.0, "LLM error: " + e.getMessage(), "error");
+                        }
+                        return scoringEngine.evaluate(mr, rules, llmAssessment);
+                    }, llmExecutor))
+                    .toList();
 
-            AnalysisResult result = scoringEngine.evaluate(mr, rules, llmAssessment);
-            results.add(result);
+            results = futures.stream()
+                    .map(CompletableFuture::join)
+                    .toList();
+        } else {
+            // Sequential scoring without LLM
+            results = mergeRequests.stream()
+                    .map(mr -> {
+                        LlmAssessment llmAssessment = new LlmAssessment(0.0, null, "none");
+                        return scoringEngine.evaluate(mr, rules, llmAssessment);
+                    })
+                    .toList();
         }
 
         AnalysisReport report = AnalysisReport.of(
@@ -90,5 +106,10 @@ public class AnalyzeMrService implements AnalyzeMrUseCase {
     @Override
     public void deleteAnalysis(Long reportId) {
         repository.deleteById(reportId);
+    }
+
+    @PreDestroy
+    void shutdown() {
+        llmExecutor.shutdownNow();
     }
 }

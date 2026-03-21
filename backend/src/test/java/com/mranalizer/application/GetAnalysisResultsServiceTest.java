@@ -64,24 +64,24 @@ class GetAnalysisResultsServiceTest {
                 .reasons(List.of("test")).matchedRules(List.of("rule1"))
                 .analyzedAt(LocalDateTime.now()).build();
 
-        AnalysisReport report = AnalysisReport.of(1L, "owner/repo", "github", LocalDateTime.now(), List.of(ar));
-        when(repository.findById(1L)).thenReturn(Optional.of(report));
+        when(repository.findResult(1L, 10L)).thenReturn(Optional.of(ar));
 
         Optional<AnalysisResult> result = service.getResult(1L, 10L);
 
         assertThat(result).isPresent();
         assertThat(result.get().getId()).isEqualTo(10L);
         assertThat(result.get().getScore()).isEqualTo(0.8);
+        verify(repository).findResult(1L, 10L);
     }
 
     @Test
     void getResult_returnsEmptyWhenResultNotInReport() {
-        AnalysisReport report = AnalysisReport.of(1L, "owner/repo", "github", LocalDateTime.now(), List.of());
-        when(repository.findById(1L)).thenReturn(Optional.of(report));
+        when(repository.findResult(1L, 999L)).thenReturn(Optional.empty());
 
         Optional<AnalysisResult> result = service.getResult(1L, 999L);
 
         assertThat(result).isEmpty();
+        verify(repository).findResult(1L, 999L);
     }
 
     @Test

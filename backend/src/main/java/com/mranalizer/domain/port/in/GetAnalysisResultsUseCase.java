@@ -25,4 +25,7 @@ public interface GetAnalysisResultsUseCase {
      * @param resultId the result ID within that report
      */
     Optional<AnalysisResult> getResult(Long reportId, Long resultId);
+
+    /** Returns all reports matching the given project slug. */
+    List<AnalysisReport> getReportsByProjectSlug(String projectSlug);
 }
