@@ -45,7 +45,9 @@ export default function AnalysisDetailPage() {
   if (loading) {
     return (
       <div className="text-center mt-5">
-        <Spinner animation="border" />
+        <Spinner animation="border" role="status">
+          <span className="visually-hidden">Ladowanie...</span>
+        </Spinner>
         <p className="mt-2">Ladowanie szczegolow analizy...</p>
       </div>
     );
@@ -73,7 +75,7 @@ export default function AnalysisDetailPage() {
       {/* Header */}
       <h3 className="mb-1">{detail.title}</h3>
       <p className="text-muted mb-3">
-        #{detail.externalId} by <strong>{detail.author}</strong>
+        #{detail.externalId} autor: <strong>{detail.author}</strong>
         {' | '}
         {changedFilesCount} plikow,{' '}
         <span className="text-success">+{additions}</span>{' / '}
@@ -105,7 +107,7 @@ export default function AnalysisDetailPage() {
         </Col>
         <Col md={6}>
           <Card>
-            <Card.Header>Score / Verdict</Card.Header>
+            <Card.Header>Wynik / Werdykt</Card.Header>
             <Card.Body className="d-flex align-items-center gap-3">
               <ScoreBadge score={detail.score} verdict={detail.verdict} />
               <span className="text-muted">{detail.verdict ?? '—'}</span>

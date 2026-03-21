@@ -81,6 +81,7 @@ public class ScoringEngine {
                 .verdict(verdict)
                 .reasons(reasons)
                 .matchedRules(matchedRuleNames)
+                .ruleResults(ruleResults)
                 .llmComment(llmComment)
                 .analyzedAt(LocalDateTime.now())
                 .overallAutomatability(llmAssessment.overallAutomatability())

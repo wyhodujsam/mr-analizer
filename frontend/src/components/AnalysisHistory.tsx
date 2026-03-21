@@ -29,9 +29,12 @@ export default function AnalysisHistory({ analyses, onDelete }: Props) {
   const navigate = useNavigate();
   const [filterRepo, setFilterRepo] = useState<string>('all');
 
-  function handleDelete(e: React.MouseEvent, reportId: number) {
+  function handleDelete(e: React.MouseEvent, reportId: number, mrCount: number) {
     e.stopPropagation();
-    if (window.confirm('Usunac analize?')) {
+    const msg = mrCount > 1
+        ? `Usunac analize? Zostanie usunietych ${mrCount} wynikow MR.`
+        : 'Usunac analize?';
+    if (window.confirm(msg)) {
       onDelete(reportId);
     }
   }
@@ -99,7 +102,7 @@ export default function AnalysisHistory({ analyses, onDelete }: Props) {
             <th>Autor</th>
             <th>Wynik</th>
             <th>Werdykt</th>
-            <th></th>
+            <th><span className="visually-hidden">Akcje</span></th>
           </tr>
         </thead>
         <tbody>
@@ -114,6 +117,9 @@ export default function AnalysisHistory({ analyses, onDelete }: Props) {
                 onClick={() => navigate(r.hasDetailedAnalysis
                   ? `/analysis/${r.reportId}/${r.id}`
                   : `/mr/${r.reportId}/${r.id}`)}
+                onKeyDown={(e) => { if (e.key === 'Enter') navigate(r.hasDetailedAnalysis ? `/analysis/${r.reportId}/${r.id}` : `/mr/${r.reportId}/${r.id}`); }}
+                tabIndex={0}
+                role="link"
               >
                 <td className="text-muted">
                   {formatDate(r.analyzedAt)}
@@ -133,7 +139,7 @@ export default function AnalysisHistory({ analyses, onDelete }: Props) {
                   <Button
                     variant="outline-danger"
                     size="sm"
-                    onClick={(e) => handleDelete(e, r.reportId)}
+                    onClick={(e) => handleDelete(e, r.reportId, reportResultCounts.get(r.reportId) ?? 1)}
                   >
                     Usun
                   </Button>

@@ -14,6 +14,7 @@ public class AnalysisResult {
     private final Verdict verdict;
     private final List<String> reasons;
     private final List<String> matchedRules;
+    private final List<RuleResult> ruleResults;
     private final String llmComment;
     private final LocalDateTime analyzedAt;
     private final int overallAutomatability;
@@ -29,6 +30,7 @@ public class AnalysisResult {
         this.verdict = builder.verdict;
         this.reasons = builder.reasons;
         this.matchedRules = builder.matchedRules;
+        this.ruleResults = builder.ruleResults != null ? builder.ruleResults : List.of();
         this.llmComment = builder.llmComment;
         this.analyzedAt = builder.analyzedAt;
         this.overallAutomatability = builder.overallAutomatability;
@@ -44,6 +46,7 @@ public class AnalysisResult {
     public Verdict getVerdict() { return verdict; }
     public List<String> getReasons() { return reasons; }
     public List<String> getMatchedRules() { return matchedRules; }
+    public List<RuleResult> getRuleResults() { return ruleResults; }
     public String getLlmComment() { return llmComment; }
     public LocalDateTime getAnalyzedAt() { return analyzedAt; }
     public int getOverallAutomatability() { return overallAutomatability; }
@@ -67,6 +70,7 @@ public class AnalysisResult {
         private Verdict verdict;
         private List<String> reasons;
         private List<String> matchedRules;
+        private List<RuleResult> ruleResults;
         private String llmComment;
         private LocalDateTime analyzedAt;
         private int overallAutomatability;
@@ -83,6 +87,7 @@ public class AnalysisResult {
         public Builder verdict(Verdict verdict) { this.verdict = verdict; return this; }
         public Builder reasons(List<String> reasons) { this.reasons = reasons; return this; }
         public Builder matchedRules(List<String> matchedRules) { this.matchedRules = matchedRules; return this; }
+        public Builder ruleResults(List<RuleResult> ruleResults) { this.ruleResults = ruleResults; return this; }
         public Builder llmComment(String llmComment) { this.llmComment = llmComment; return this; }
         public Builder analyzedAt(LocalDateTime analyzedAt) { this.analyzedAt = analyzedAt; return this; }
         public Builder overallAutomatability(int overallAutomatability) { this.overallAutomatability = overallAutomatability; return this; }

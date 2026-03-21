@@ -43,10 +43,14 @@ export default function MrBrowseTable({ items, selectedIds, onSelectionChange }:
     onSelectionChange(next);
   }
 
+  function openMr(item: MrBrowseItem) {
+    window.open(item.url, '_blank', 'noopener,noreferrer');
+  }
+
   function handleRowClick(e: React.MouseEvent, item: MrBrowseItem) {
     // Don't open link if clicking checkbox
     if ((e.target as HTMLElement).closest('input[type="checkbox"]')) return;
-    window.open(item.url, '_blank', 'noopener,noreferrer');
+    openMr(item);
   }
 
   return (
@@ -76,6 +80,9 @@ export default function MrBrowseTable({ items, selectedIds, onSelectionChange }:
             key={item.externalId}
             className={`clickable-row ${selectedIds.has(item.externalId) ? 'table-active' : ''}`}
             onClick={(e) => handleRowClick(e, item)}
+            onKeyDown={(e) => { if (e.key === 'Enter') openMr(item); }}
+            tabIndex={0}
+            role="link"
             style={{ cursor: 'pointer' }}
           >
             <td onClick={(e) => e.stopPropagation()}>

@@ -10,6 +10,7 @@ import com.mranalizer.domain.model.AnalysisResult;
 import com.mranalizer.domain.model.FetchCriteria;
 import com.mranalizer.domain.port.in.AnalyzeMrUseCase;
 import com.mranalizer.domain.port.in.GetAnalysisResultsUseCase;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,7 +31,7 @@ public class AnalysisRestController {
     }
 
     @PostMapping("/analysis")
-    public ResponseEntity<AnalysisResponse> triggerAnalysis(@RequestBody AnalysisRequestDto request) {
+    public ResponseEntity<AnalysisResponse> triggerAnalysis(@Valid @RequestBody AnalysisRequestDto request) {
         FetchCriteria criteria = request.toFetchCriteria();
         AnalysisReport report = analyzeMrUseCase.analyze(criteria, request.useLlm(), request.selectedMrIds());
         return ResponseEntity.ok(AnalysisResponse.from(report));
