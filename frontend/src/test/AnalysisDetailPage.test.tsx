@@ -152,4 +152,33 @@ describe('AnalysisDetailPage', () => {
     expect(reviewRow).toBeTruthy();
     expect(reviewRow!.textContent).toContain('\u2014');
   });
+
+  it('shows error message when API fails', async () => {
+    (getMrDetail as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Network error'));
+    render(
+      <MemoryRouter initialEntries={['/analysis/1/1']}>
+        <Routes>
+          <Route path="/analysis/:reportId/:resultId" element={<AnalysisDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(await screen.findByText('Nie udalo sie zaladowac szczegolow analizy.')).toBeInTheDocument();
+  });
+
+  it('shows category score badge colors correctly', async () => {
+    renderPage(fullDetail({
+      categories: [
+        { name: 'High score', score: 92, reasoning: 'Excellent' },
+        { name: 'Medium score', score: 75, reasoning: 'Good' },
+        { name: 'Low score', score: 55, reasoning: 'Okay' },
+        { name: 'Very low', score: 30, reasoning: 'Poor' },
+      ],
+      summaryTable: [],
+    }));
+    expect(await screen.findByText('High score')).toBeInTheDocument();
+    expect(screen.getByText('92%')).toBeInTheDocument();
+    expect(screen.getByText('75%')).toBeInTheDocument();
+    expect(screen.getByText('55%')).toBeInTheDocument();
+    expect(screen.getByText('30%')).toBeInTheDocument();
+  });
 });

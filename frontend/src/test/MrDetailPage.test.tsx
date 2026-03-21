@@ -125,4 +125,56 @@ describe('MrDetailPage', () => {
     await screen.findByText('Test PR');
     expect(screen.queryByText('Szczegoly analizy LLM')).not.toBeInTheDocument();
   });
+
+  it('shows error message when API returns axios error', async () => {
+    const axiosError = {
+      response: {
+        data: { message: 'MR not found' },
+      },
+    };
+    (getMrDetail as ReturnType<typeof vi.fn>).mockRejectedValue(axiosError);
+    render(
+      <MemoryRouter initialEntries={['/mr/1/1']}>
+        <Routes>
+          <Route path="/mr/:reportId/:resultId" element={<MrDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(await screen.findByText('MR not found')).toBeInTheDocument();
+  });
+
+  it('shows connection error when API throws non-axios error', async () => {
+    (getMrDetail as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Network error'));
+    render(
+      <MemoryRouter initialEntries={['/mr/1/1']}>
+        <Routes>
+          <Route path="/mr/:reportId/:resultId" element={<MrDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(await screen.findByText('Nie udalo sie polaczyc z serwerem.')).toBeInTheDocument();
+  });
+
+  it('shows description when present', async () => {
+    renderPage(fullDetail({ description: 'This is a PR description' }));
+    expect(await screen.findByText('This is a PR description')).toBeInTheDocument();
+    expect(screen.getByText('Opis')).toBeInTheDocument();
+  });
+
+  it('shows LLM comment when present', async () => {
+    renderPage(fullDetail({ llmComment: 'Great PR work' }));
+    expect(await screen.findByText('Great PR work')).toBeInTheDocument();
+    expect(screen.getByText('Komentarz LLM')).toBeInTheDocument();
+  });
+
+  it('shows score breakdown table', async () => {
+    renderPage(fullDetail({
+      scoreBreakdown: [
+        { rule: 'boost-by-has-tests', type: 'boost', weight: 0.15, reason: 'has tests' },
+      ],
+    }));
+    expect(await screen.findByText('Rozbicie punktacji')).toBeInTheDocument();
+    expect(screen.getByText('boost-by-has-tests')).toBeInTheDocument();
+    expect(screen.getByText('has tests')).toBeInTheDocument();
+  });
 });
