@@ -22,6 +22,7 @@ public class ScoringSteps {
     private List<ChangedFile> changedFiles;
     private ScoringEngine scoringEngine;
     private AnalysisResult result;
+    private LlmAssessment llmAssessment;
     private static final LlmAssessment NO_LLM = new LlmAssessment(0.0, "", "none");
 
     @Before
@@ -43,6 +44,7 @@ public class ScoringSteps {
                 .url("https://example.com/mr/1")
                 .projectSlug("test/project");
         changedFiles = new ArrayList<>();
+        llmAssessment = null;
     }
 
     @Given("the scoring engine is configured with default thresholds")
@@ -173,6 +175,11 @@ public class ScoringSteps {
         // Don't set changedFiles on the builder — will default to empty list
     }
 
+    @Given("the LLM assessment has score adjustment of {double}")
+    public void llmAssessmentHasScoreAdjustment(double adjustment) {
+        llmAssessment = new LlmAssessment(adjustment, "LLM positive assessment", "claude-cli");
+    }
+
     // --- When steps ---
 
     @When("the scoring engine evaluates it with label exclusion rules")
@@ -194,6 +201,13 @@ public class ScoringSteps {
         MergeRequest mr = buildMr();
         List<Rule> rules = List.of(createMinFilesExcludeRule(minFiles));
         result = scoringEngine.evaluate(mr, rules, NO_LLM);
+    }
+
+    @When("the scoring engine evaluates it with a minimum {int} files rule and LLM")
+    public void scoringEngineEvaluatesWithMinFilesRuleAndLlm(int minFiles) {
+        MergeRequest mr = buildMr();
+        List<Rule> rules = List.of(ExcludeRule.byMinChangedFiles(minFiles));
+        result = scoringEngine.evaluate(mr, rules, llmAssessment != null ? llmAssessment : NO_LLM);
     }
 
     @When("the scoring engine evaluates it with a config-only exclusion rule")
@@ -303,6 +317,13 @@ public class ScoringSteps {
     public void verdictShouldBeMaybeOrNotSuitable() {
         assertTrue(result.getVerdict() == Verdict.MAYBE || result.getVerdict() == Verdict.NOT_SUITABLE,
                 "Expected MAYBE or NOT_SUITABLE but was " + result.getVerdict());
+    }
+
+    @Then("the verdict should not be NOT_SUITABLE from hard exclude")
+    public void verdictShouldNotBeHardExcluded() {
+        // With soft exclude + LLM boost, score should be > 0 (not hard-excluded)
+        assertTrue(result.getScore() > 0,
+                "Score should be > 0 with soft exclude + LLM, but was " + result.getScore());
     }
 
     @Then("the reasons should contain {string}")

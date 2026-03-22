@@ -32,8 +32,12 @@ public class ExcludeRule implements Rule {
         return name;
     }
 
-    private static RuleResult excluded(String ruleName, String reason) {
+    private static RuleResult hardExcluded(String ruleName, String reason) {
         return new RuleResult(ruleName, true, ScoringEngine.EXCLUDE_WEIGHT, reason);
+    }
+
+    private static RuleResult softExcluded(String ruleName, String reason) {
+        return new RuleResult(ruleName, true, ScoringEngine.SOFT_EXCLUDE_WEIGHT, reason);
     }
 
     private static RuleResult notMatched(String ruleName) {
@@ -45,7 +49,7 @@ public class ExcludeRule implements Rule {
         return new ExcludeRule(ruleName, mr -> {
             for (String label : mr.getLabels()) {
                 if (excludedLabels.contains(label)) {
-                    return excluded(ruleName, "excluded by label: " + label);
+                    return hardExcluded(ruleName, "excluded by label: " + label);
                 }
             }
             return notMatched(ruleName);
@@ -53,29 +57,29 @@ public class ExcludeRule implements Rule {
     }
 
     public static ExcludeRule byMinChangedFiles(int min) {
-        String ruleName = "exclude-by-min-changed-files";
+        String ruleName = "soft-exclude-by-min-changed-files";
         return new ExcludeRule(ruleName, mr -> {
             int count = mr.getDiffStats().changedFilesCount();
             if (count < min) {
-                return excluded(ruleName, "excluded: only " + count + " changed files (min: " + min + ")");
+                return softExcluded(ruleName, "soft-exclude: only " + count + " changed files (min: " + min + ")");
             }
             return notMatched(ruleName);
         });
     }
 
     public static ExcludeRule byMaxChangedFiles(int max) {
-        String ruleName = "exclude-by-max-changed-files";
+        String ruleName = "soft-exclude-by-max-changed-files";
         return new ExcludeRule(ruleName, mr -> {
             int count = mr.getDiffStats().changedFilesCount();
             if (count > max) {
-                return excluded(ruleName, "excluded: " + count + " changed files exceeds max " + max);
+                return softExcluded(ruleName, "soft-exclude: " + count + " changed files exceeds max " + max);
             }
             return notMatched(ruleName);
         });
     }
 
     public static ExcludeRule byFileExtensionsOnly(List<String> extensions) {
-        String ruleName = "exclude-by-file-extensions-only";
+        String ruleName = "soft-exclude-by-file-extensions-only";
         return new ExcludeRule(ruleName, mr -> {
             var files = mr.getChangedFiles();
             if (files.isEmpty()) {
@@ -86,7 +90,7 @@ public class ExcludeRule implements Rule {
                 return extensions.stream().anyMatch(path::endsWith);
             });
             if (allMatch) {
-                return excluded(ruleName, "excluded: all changed files have excluded extensions");
+                return softExcluded(ruleName, "soft-exclude: all changed files have excluded extensions");
             }
             return notMatched(ruleName);
         });

@@ -1,4 +1,4 @@
-# BUG-003: Exclude rules ignoruja LLM assessment — score 0 mimo pozytywnej analizy LLM
+# BUG-003: Exclude rules ignoruja LLM assessment — score 0 mimo pozytywnej analizy LLM [NAPRAWIONY]
 
 ## Opis
 
@@ -31,3 +31,7 @@ Alternatywnie prostsze podejscie:
 1. Przegladaj MR z repo ktore ma PR z 1 zmienionym plikiem lub >50 plikami
 2. Wlacz LLM i uruchom analize
 3. LLM zwraca overallAutomatability ~80%+ ale score = 0.00, verdict = NOT_SUITABLE
+
+## Fix (014-bugfixes)
+
+Rozdzielono exclude rules na hard (labels → EXCLUDE_WEIGHT, score=0) i soft (file-based → SOFT_EXCLUDE_WEIGHT=-0.4, LLM moze kompensowac). Hard exclude zachowany dla hotfix/security/emergency.

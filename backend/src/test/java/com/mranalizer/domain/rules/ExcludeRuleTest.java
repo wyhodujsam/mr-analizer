@@ -58,7 +58,7 @@ class ExcludeRuleTest {
     class MinChangedFiles {
 
         @Test
-        @DisplayName("PR with 1 file should be excluded when min is 2")
+        @DisplayName("PR with 1 file should be soft-excluded when min is 2")
         void prWithOneFile_shouldBeExcluded() {
             MergeRequest mr = baseMrBuilder()
                     .changedFiles(List.of(new ChangedFile("src/A.java", 10, 5, "modified")))
@@ -69,7 +69,8 @@ class ExcludeRuleTest {
             RuleResult result = rule.evaluate(mr);
 
             assertTrue(result.matched());
-            assertTrue(result.weight() <= -999.0);
+            assertEquals(ScoringEngine.SOFT_EXCLUDE_WEIGHT, result.weight());
+            assertTrue(result.reason().contains("soft-exclude"));
         }
 
         @Test
@@ -111,7 +112,8 @@ class ExcludeRuleTest {
             RuleResult result = rule.evaluate(mr);
 
             assertTrue(result.matched());
-            assertTrue(result.weight() <= -999.0);
+            assertEquals(ScoringEngine.SOFT_EXCLUDE_WEIGHT, result.weight());
+            assertTrue(result.reason().contains("soft-exclude"));
         }
     }
 
@@ -135,7 +137,8 @@ class ExcludeRuleTest {
             RuleResult result = rule.evaluate(mr);
 
             assertTrue(result.matched());
-            assertTrue(result.weight() <= -999.0);
+            assertEquals(ScoringEngine.SOFT_EXCLUDE_WEIGHT, result.weight());
+            assertTrue(result.reason().contains("soft-exclude"));
         }
 
         @Test
