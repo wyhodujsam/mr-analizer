@@ -50,3 +50,10 @@ Feature: End-to-end merge request analysis
   Scenario: Analysis with blank project slug is rejected
     When I trigger analysis with a blank project slug
     Then the system should return a validation error about project slug
+
+  Scenario: Retrieving analysis report loads results efficiently
+    Given the repository has 5 merge requests
+    When I trigger analysis for "owner/repo"
+    And I retrieve the analysis report by its ID
+    Then the analysis report should contain 5 results
+    And each result should have a score and verdict

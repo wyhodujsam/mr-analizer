@@ -63,6 +63,18 @@ mr-analizer:
       touches-config:
         weight: 0.1
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: mr-analizer
+
 spring:
   datasource:
     url: jdbc:h2:file:./data/mranalizer
@@ -85,3 +97,7 @@ spring:
   h2:
     console:
       enabled: true
+  jpa:
+    properties:
+      hibernate:
+        generate_statistics: true

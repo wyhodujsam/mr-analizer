@@ -43,3 +43,6 @@ dist/
 .env
 .env.local
 *.properties.local
+
+# Performance profiling reports
+reports/

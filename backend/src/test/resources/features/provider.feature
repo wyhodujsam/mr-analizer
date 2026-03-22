@@ -18,3 +18,8 @@ Feature: VCS provider merge request fetching
     Given a provider that responds with rate limit exceeded
     When the system attempts to fetch merge requests
     Then the system should return a rate limit error with a clear message
+
+  Scenario: Provider without authentication token returns auth error immediately
+    Given a provider that has no authentication token configured
+    When the system attempts to fetch merge requests
+    Then the system should return an authentication error with message about missing token

@@ -9,14 +9,18 @@ Auto-generated from all feature plans. Last updated: 2026-03-21
 - Vitest 4.x + React Testing Library (frontend testing, requires Node 22+)
 - H2 (dev database)
 - Bootstrap 5 / React-Bootstrap (UI)
+- Spring Boot Actuator + Micrometer (performance metrics, dev profile)
+- async-profiler v3.0 (CPU/alloc flame graphs, external CLI tool)
 
 ## Project Structure
 
 ```text
 backend/                              # Spring Boot REST API (hexagonal: domain/, application/, adapter/)
 frontend/                             # React + TypeScript SPA
-specs/                                # SDD feature specs (001-007)
+specs/                                # SDD feature specs (001-012)
 specs/bugs/                           # Known bugs documentation
+scripts/                              # Dev tools (profile.sh)
+reports/                              # Performance profiling reports (gitignored)
 .specify/                             # Spec Kit infrastructure
 ```
 
@@ -42,12 +46,18 @@ LLM adapter: `claude-cli` (configurable in `application.yml`: `mr-analizer.llm.a
 cd backend && mvn clean install       # build
 cd backend && mvn test                # all tests (unit + Cucumber + integration)
 cd backend && mvn spring-boot:run     # run on port 8083
+cd backend && mvn spring-boot:run -Dspring-boot.run.profiles=dev  # run with dev profile (H2 console + diagnostics)
 
 # Frontend
 cd frontend && npm install            # install deps
 cd frontend && npm run dev            # dev server on port 3000
 cd frontend && npm run build          # production build
 cd frontend && npm test               # run Vitest tests
+
+# Performance Profiling
+/profile                              # Claude command: full profiling
+/profile --with-load --duration 60    # profiling with load generation
+bash scripts/profile.sh --help        # manual script usage
 ```
 
 ## Code Style
@@ -80,7 +90,16 @@ Domain-level exceptions live in `domain/exception/` — adapters wrap provider-s
 - MR metadata (branches, state, dates, labels, diffStats) fully persisted in AnalysisResultEntity
 - Frontend null-safe: all nullable API fields handled with `?? []` / `?? 0` / `?? '\u2014'`
 
+## Performance Profiling
+
+- `/profile` Claude command runs `scripts/profile.sh` and analyzes results
+- `DiagnosticsController` (`@Profile("dev")`) exposes `GET/POST /api/diagnostics/sql-stats` for Hibernate Statistics
+- Actuator endpoints: `/actuator/health`, `/actuator/metrics`, `/actuator/prometheus` (configured in application.yml)
+- async-profiler: external CLI tool, install in `~/tools/async-profiler/` (see `specs/012-performance-profiling/quickstart.md`)
+- Reports saved in `reports/` (gitignored), flame graphs in `reports/flamegraphs/`
+
 ## Recent Changes
+- 012-performance-profiling: `/profile` command, DiagnosticsController, Actuator+Micrometer, async-profiler integration, `scripts/profile.sh`
 - 007-llm-analysis-details: Detailed LLM analysis (categories, oversight, summary), dedicated AnalysisDetailPage, frontend tests (Vitest), Polish translation, MR metadata persistence fix, Claude CLI stdin fix
 - 003-cleanup: Split AnalyzeMrService (command/query), domain exceptions, validation, NPE fixes, GlobalExceptionHandler cleanup
 - 002-mr-browse-analyze: Browse flow, repo CRUD, cache, MR selection
