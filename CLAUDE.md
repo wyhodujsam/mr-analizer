@@ -36,8 +36,11 @@ LLM adapter: `claude-cli` (configurable in `application.yml`: `mr-analizer.llm.a
 - Unit: JUnit 5 + Mockito for domain logic
 - Integration: `IntegrationTest.java` — REST API round-trip including MR metadata persistence
 - Frontend: Vitest + React Testing Library — null safety, navigation, component rendering
+- Integration: MockWebServer + realistyczne GitHub API fixtures, pełny Spring context BEZ @MockBean na providerach
+- E2E: Playwright (Chromium headless) z route interception
 - Run backend: `cd backend && mvn test`
-- Run frontend: `cd frontend && npx vitest run` (requires Node 22+, use nvm)
+- Run frontend unit: `cd frontend && npx vitest run` (requires Node 22+, use nvm)
+- Run frontend E2E: `cd frontend && npx playwright test`
 
 ## Commands
 

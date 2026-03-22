@@ -1,0 +1,6 @@
+[
+  {"filename": "src/main/java/auth/AuthService.java", "additions": 200, "deletions": 30, "status": "modified"},
+  {"filename": "src/main/java/auth/OAuthProvider.java", "additions": 100, "deletions": 10, "status": "added"},
+  {"filename": "src/main/java/config/SecurityConfig.java", "additions": 30, "deletions": 5, "status": "modified"},
+  {"filename": "src/main/resources/application.yml", "additions": 20, "deletions": 5, "status": "modified"}
+]

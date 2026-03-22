@@ -1,0 +1,7 @@
+[
+  {"filename": "src/main/java/data/Repository.java", "additions": 300, "deletions": 100, "status": "modified"},
+  {"filename": "src/main/java/data/Entity.java", "additions": 200, "deletions": 80, "status": "modified"},
+  {"filename": "src/main/java/data/Mapper.java", "additions": 150, "deletions": 60, "status": "modified"},
+  {"filename": "src/main/java/data/Service.java", "additions": 100, "deletions": 40, "status": "modified"},
+  {"filename": "src/main/java/data/Config.java", "additions": 50, "deletions": 20, "status": "modified"}
+]

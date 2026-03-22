@@ -1,0 +1,16 @@
+{
+  "number": 2,
+  "title": "Massive refactor of data layer",
+  "body": "Complete rewrite of persistence layer",
+  "state": "closed",
+  "user": {"login": "alice"},
+  "head": {"ref": "refactor/data"},
+  "base": {"ref": "main"},
+  "created_at": "2026-03-15T09:00:00Z",
+  "merged_at": "2026-03-15T09:02:00Z",
+  "labels": [{"name": "tech-debt"}],
+  "html_url": "https://github.com/test/repo/pull/2",
+  "additions": 800,
+  "deletions": 300,
+  "changed_files": 15
+}
