@@ -49,10 +49,7 @@ public class GitHubAdapter implements MergeRequestProvider {
                 .filter(pr -> matchesDateFilter(pr, criteria.getAfter(), criteria.getBefore()))
                 .filter(pr -> matchesStateFilter(pr, criteria.getState()))
                 .limit(criteria.getLimit())
-                .map(pr -> {
-                    List<GitHubFile> files = client.fetchFiles(owner, repo, pr.getNumber());
-                    return mapper.toDomain(pr, files, projectSlug);
-                })
+                .map(pr -> mapper.toDomainWithoutFiles(pr, projectSlug))
                 .collect(Collectors.toList());
     }
 

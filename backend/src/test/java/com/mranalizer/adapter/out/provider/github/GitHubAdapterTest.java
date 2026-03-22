@@ -40,7 +40,7 @@ class GitHubAdapterTest {
     // --- fetchMergeRequests ---
 
     @Test
-    void fetchMergeRequests_delegatesToClientAndMapper() {
+    void fetchMergeRequests_delegatesToClientAndMapper_withoutFetchingFiles() {
         FetchCriteria criteria = FetchCriteria.builder()
                 .projectSlug("owner/repo")
                 .limit(10)
@@ -48,20 +48,18 @@ class GitHubAdapterTest {
 
         GitHubPullRequest pr = createPr(1, "PR 1", "open",
                 ZonedDateTime.of(2026, 1, 15, 10, 0, 0, 0, ZoneOffset.UTC), null);
-        List<GitHubFile> files = List.of(createFile("Main.java", 10, 2, "modified"));
         MergeRequest mr = MergeRequest.builder().externalId("1").title("PR 1").build();
 
         when(client.fetchPullRequests("owner", "repo", "all", 10, 10)).thenReturn(List.of(pr));
-        when(client.fetchFiles("owner", "repo", 1)).thenReturn(files);
-        when(mapper.toDomain(pr, files, "owner/repo")).thenReturn(mr);
+        when(mapper.toDomainWithoutFiles(pr, "owner/repo")).thenReturn(mr);
 
         List<MergeRequest> result = adapter.fetchMergeRequests(criteria);
 
         assertEquals(1, result.size());
         assertEquals("PR 1", result.get(0).getTitle());
         verify(client).fetchPullRequests("owner", "repo", "all", 10, 10);
-        verify(client).fetchFiles("owner", "repo", 1);
-        verify(mapper).toDomain(pr, files, "owner/repo");
+        verify(client, never()).fetchFiles(anyString(), anyString(), anyInt());
+        verify(mapper).toDomainWithoutFiles(pr, "owner/repo");
     }
 
     @Test
@@ -86,19 +84,14 @@ class GitHubAdapterTest {
         when(client.fetchPullRequests(eq("owner"), eq("repo"), anyString(), anyInt(), anyInt()))
                 .thenReturn(List.of(prJan, prFeb, prMar));
 
-        List<GitHubFile> files = Collections.emptyList();
-        when(client.fetchFiles("owner", "repo", 2)).thenReturn(files);
-
         MergeRequest mr = MergeRequest.builder().externalId("2").title("Feb PR").build();
-        when(mapper.toDomain(prFeb, files, "owner/repo")).thenReturn(mr);
+        when(mapper.toDomainWithoutFiles(prFeb, "owner/repo")).thenReturn(mr);
 
         List<MergeRequest> result = adapter.fetchMergeRequests(criteria);
 
         assertEquals(1, result.size());
         assertEquals("Feb PR", result.get(0).getTitle());
-        // Files should only be fetched for the PR that passes the filter
-        verify(client, never()).fetchFiles("owner", "repo", 1);
-        verify(client, never()).fetchFiles("owner", "repo", 3);
+        verify(client, never()).fetchFiles(anyString(), anyString(), anyInt());
     }
 
     @Test
@@ -121,16 +114,14 @@ class GitHubAdapterTest {
         when(client.fetchPullRequests("owner", "repo", "all", 100, 100))
                 .thenReturn(List.of(prOpen, prMerged));
 
-        List<GitHubFile> files = Collections.emptyList();
-        when(client.fetchFiles("owner", "repo", 2)).thenReturn(files);
-
         MergeRequest mr = MergeRequest.builder().externalId("2").title("Merged PR").build();
-        when(mapper.toDomain(prMerged, files, "owner/repo")).thenReturn(mr);
+        when(mapper.toDomainWithoutFiles(prMerged, "owner/repo")).thenReturn(mr);
 
         List<MergeRequest> result = adapter.fetchMergeRequests(criteria);
 
         assertEquals(1, result.size());
         assertEquals("Merged PR", result.get(0).getTitle());
+        verify(client, never()).fetchFiles(anyString(), anyString(), anyInt());
     }
 
     @Test
@@ -148,16 +139,14 @@ class GitHubAdapterTest {
         when(client.fetchPullRequests("owner", "repo", "all", 1, 1))
                 .thenReturn(List.of(pr1, pr2));
 
-        List<GitHubFile> files = Collections.emptyList();
-        when(client.fetchFiles("owner", "repo", 1)).thenReturn(files);
-
         MergeRequest mr = MergeRequest.builder().externalId("1").title("PR 1").build();
-        when(mapper.toDomain(pr1, files, "owner/repo")).thenReturn(mr);
+        when(mapper.toDomainWithoutFiles(pr1, "owner/repo")).thenReturn(mr);
 
         List<MergeRequest> result = adapter.fetchMergeRequests(criteria);
 
         // Should be limited to 1 despite 2 PRs from API
         assertEquals(1, result.size());
+        verify(client, never()).fetchFiles(anyString(), anyString(), anyInt());
     }
 
     // --- fetchMergeRequest ---

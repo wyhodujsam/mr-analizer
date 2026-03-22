@@ -23,3 +23,10 @@ Feature: VCS provider merge request fetching
     Given a provider that has no authentication token configured
     When the system attempts to fetch merge requests
     Then the system should return an authentication error with message about missing token
+
+  Scenario: Browsing MRs does not fetch file details for each PR
+    Given a provider returning 3 merge requests for "owner/repo" without file details
+    When the system fetches merge requests for "owner/repo"
+    Then 3 merge requests should be returned
+    And each merge request should have diff stats from PR metadata
+    And each merge request should have an empty changed files list

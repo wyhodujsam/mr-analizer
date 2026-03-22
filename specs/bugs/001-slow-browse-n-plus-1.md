@@ -1,4 +1,4 @@
-# BUG-001: Wolne pobieranie MR — N+1 problem z GitHub API
+# BUG-001: Wolne pobieranie MR — N+1 problem z GitHub API [NAPRAWIONY]
 
 ## Opis
 
@@ -35,3 +35,7 @@ Opcja 2 (lazy loading) — najczystsza. Browse nie potrzebuje plików, a `change
 ## Priorytet
 
 Średni — nie blokuje, ale znacząco psuje UX.
+
+## Fix (014-bugfixes)
+
+Opcja 2 (lazy loading) — `fetchMergeRequests()` uzywa `toDomainWithoutFiles()` z polami `additions/deletions/changed_files` z PR response. Pliki pobierane tylko w `fetchMergeRequest()` (per-MR analysis).

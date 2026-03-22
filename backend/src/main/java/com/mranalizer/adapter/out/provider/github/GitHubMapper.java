@@ -60,6 +60,41 @@ public class GitHubMapper {
                 .build();
     }
 
+    /**
+     * Map PR without fetching files — for browse (list) operations.
+     * DiffStats come from PR metadata fields (additions, deletions, changed_files).
+     */
+    public MergeRequest toDomainWithoutFiles(GitHubPullRequest pr, String projectSlug) {
+        DiffStats diffStats = new DiffStats(pr.getAdditions(), pr.getDeletions(), pr.getChangedFilesCount());
+
+        List<String> labels = pr.getLabels() != null
+                ? pr.getLabels().stream()
+                    .map(GitHubPullRequest.Label::getName)
+                    .collect(Collectors.toList())
+                : Collections.emptyList();
+
+        String state = pr.getMergedAt() != null ? "merged" : pr.getState();
+
+        return MergeRequest.builder()
+                .externalId(String.valueOf(pr.getNumber()))
+                .title(pr.getTitle())
+                .description(pr.getBody())
+                .author(pr.getUser() != null ? pr.getUser().getLogin() : "unknown")
+                .sourceBranch(pr.getHead() != null ? pr.getHead().getRef() : null)
+                .targetBranch(pr.getBase() != null ? pr.getBase().getRef() : null)
+                .state(state)
+                .createdAt(toLocalDateTime(pr.getCreatedAt()))
+                .mergedAt(toLocalDateTime(pr.getMergedAt()))
+                .labels(labels)
+                .changedFiles(List.of())
+                .diffStats(diffStats)
+                .hasTests(false)
+                .provider("github")
+                .url(pr.getHtmlUrl())
+                .projectSlug(projectSlug)
+                .build();
+    }
+
     private LocalDateTime toLocalDateTime(ZonedDateTime zdt) {
         if (zdt == null) return null;
         return zdt.withZoneSameInstant(ZoneOffset.UTC).toLocalDateTime();

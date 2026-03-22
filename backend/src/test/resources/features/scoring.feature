@@ -56,6 +56,13 @@ Feature: Merge request scoring and verdict assignment
     When the scoring engine evaluates it with penalty rules
     Then the verdict should be MAYBE or NOT_SUITABLE
 
+  Scenario: PR with too few files but positive LLM gets partial score (soft exclude)
+    Given a merge request with 1 changed file
+    And the LLM assessment has score adjustment of 0.3
+    When the scoring engine evaluates it with a minimum 2 files rule and LLM
+    Then the score should be greater than 0
+    And the verdict should not be NOT_SUITABLE from hard exclude
+
   Scenario: PR matching no rules gets base score
     Given a merge request with title "update readme"
     And the merge request has 3 changed files

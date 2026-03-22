@@ -82,6 +82,53 @@ public class ProviderSteps {
         when(mergeRequestProvider.getProviderName()).thenReturn("github");
     }
 
+    @Given("a provider returning {int} merge requests for {string} without file details")
+    public void providerReturningMrsWithoutFiles(int count, String slug) {
+        List<MergeRequest> mrs = IntStream.rangeClosed(1, count)
+                .mapToObj(i -> MergeRequest.builder()
+                        .id((long) i)
+                        .externalId(String.valueOf(i))
+                        .title("PR #" + i)
+                        .description("Description " + i)
+                        .author("developer" + i)
+                        .sourceBranch("feature/pr-" + i)
+                        .targetBranch("main")
+                        .state("merged")
+                        .createdAt(LocalDateTime.now().minusDays(i))
+                        .mergedAt(LocalDateTime.now())
+                        .labels(List.of())
+                        .changedFiles(List.of())
+                        .diffStats(new DiffStats(20, 5, 3))
+                        .hasTests(false)
+                        .provider("github")
+                        .url("https://github.com/" + slug + "/pull/" + i)
+                        .projectSlug(slug)
+                        .build())
+                .toList();
+        when(mergeRequestProvider.fetchMergeRequests(any())).thenReturn(mrs);
+        when(mergeRequestProvider.getProviderName()).thenReturn("github");
+    }
+
+    @Then("each merge request should have diff stats from PR metadata")
+    public void eachMrShouldHaveDiffStats() {
+        assertNotNull(fetchedMrs);
+        for (MergeRequest mr : fetchedMrs) {
+            assertNotNull(mr.getDiffStats(), "DiffStats should not be null");
+            assertTrue(mr.getDiffStats().changedFilesCount() > 0,
+                    "Changed files count should come from PR metadata");
+        }
+    }
+
+    @Then("each merge request should have an empty changed files list")
+    public void eachMrShouldHaveEmptyChangedFiles() {
+        assertNotNull(fetchedMrs);
+        for (MergeRequest mr : fetchedMrs) {
+            assertNotNull(mr.getChangedFiles(), "Changed files should not be null");
+            assertTrue(mr.getChangedFiles().isEmpty(),
+                    "Changed files should be empty (not fetched during browse)");
+        }
+    }
+
     @Given("a provider that has no authentication token configured")
     public void providerWithNoToken() {
         when(mergeRequestProvider.fetchMergeRequests(any()))

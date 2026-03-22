@@ -42,6 +42,15 @@ public class GitHubPullRequest {
     @JsonProperty("html_url")
     private String htmlUrl;
 
+    @JsonProperty("additions")
+    private int additions;
+
+    @JsonProperty("deletions")
+    private int deletions;
+
+    @JsonProperty("changed_files")
+    private int changedFilesCount;
+
     public int getNumber() { return number; }
     public void setNumber(int number) { this.number = number; }
 
@@ -74,6 +83,15 @@ public class GitHubPullRequest {
 
     public String getHtmlUrl() { return htmlUrl; }
     public void setHtmlUrl(String htmlUrl) { this.htmlUrl = htmlUrl; }
+
+    public int getAdditions() { return additions; }
+    public void setAdditions(int additions) { this.additions = additions; }
+
+    public int getDeletions() { return deletions; }
+    public void setDeletions(int deletions) { this.deletions = deletions; }
+
+    public int getChangedFilesCount() { return changedFilesCount; }
+    public void setChangedFilesCount(int changedFilesCount) { this.changedFilesCount = changedFilesCount; }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class User {

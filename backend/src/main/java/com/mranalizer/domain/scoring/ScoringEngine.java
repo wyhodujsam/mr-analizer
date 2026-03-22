@@ -17,8 +17,11 @@ import java.util.List;
  */
 public class ScoringEngine {
 
-    /** Sentinel weight value — any matched rule with weight <= this triggers immediate exclusion. */
+    /** Sentinel weight value — any matched rule with weight <= this triggers immediate exclusion (hard). */
     public static final double EXCLUDE_WEIGHT = -1000.0;
+
+    /** Weight for soft exclude rules (file-based) — heavy penalty but LLM can partially compensate. */
+    public static final double SOFT_EXCLUDE_WEIGHT = -0.4;
 
     private final ScoringConfig config;
 
