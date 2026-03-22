@@ -23,7 +23,7 @@ public record MrBrowseResponse(
                 mr.getCreatedAt() != null ? mr.getCreatedAt().toString() : null,
                 mr.getMergedAt() != null ? mr.getMergedAt().toString() : null,
                 mr.getState(),
-                mr.getChangedFiles() != null ? mr.getChangedFiles().size() : 0,
+                mr.getDiffStats() != null ? mr.getDiffStats().changedFilesCount() : 0,
                 mr.getLabels() != null ? mr.getLabels() : List.of(),
                 mr.getUrl()
         );

@@ -98,7 +98,48 @@ Domain-level exceptions live in `domain/exception/` — adapters wrap provider-s
 - async-profiler: external CLI tool, install in `~/tools/async-profiler/` (see `specs/012-performance-profiling/quickstart.md`)
 - Reports saved in `reports/` (gitignored), flame graphs in `reports/flamegraphs/`
 
+## Activity Module (odseparowany)
+
+Moduł analizy aktywności kontrybutora — wykrywanie nieprawidłowości (za duże PR-y, rubber-stamping, praca weekendowa, brak review).
+
+- **Domain**: `domain/model/activity/`, `domain/service/activity/`, `domain/port/in/activity/`, `domain/port/out/activity/`
+- **Rules** (Strategy pattern): `LargePrRule`, `QuickReviewRule`, `WeekendWorkRule`, `NightWorkRule`, `NoReviewRule`, `SelfMergeRule`, `AggregateRules`
+- **REST API**: `ActivityController` — `/api/activity/{owner}/{repo}/contributors`, `/api/activity/{owner}/{repo}/report?author=`
+- **Frontend**: `/activity` route, `ActivityDashboardPage`, heatmapa SVG (GitHub-style), drill-down
+- **GitHub adapter**: `GitHubReviewAdapter` — fetches PR reviews via `/repos/{owner}/{repo}/pulls/{number}/reviews`
+
+## Lessons Learned (code review 015)
+
+### GitHub API: lista vs single PR
+GitHub `GET /pulls` (lista) **nie zwraca** `additions`, `deletions`, `changed_files`. Te pola są tylko na `GET /pulls/{number}` (single). Każdy feature korzystający z rozmiaru PR-a musi fetchować single PR per item. Koszt: N dodatkowych API calls — używać parallel fetch (`CompletableFuture`) i ograniczać limit.
+
+### N+1 problem z GitHub API
+Moduł activity fetchuje N detail + N reviews = 2N calls. Mitigation:
+- Parallel fetch via `CompletableFuture` (nie sekwencyjnie)
+- Reviews tylko dla merged PRs (open/closed nie potrzebują)
+- Limit 200 PRs max
+- Rate limit: 5000/h authenticated — kilka raportów wyczerpie jeśli repo ma dużo PRs
+
+### Domain purity w hexagonal
+- **NIE** używać `@Service`/`@Component` w `domain/` — rejestracja beanów w `adapter/config/`
+- Porty (`ReviewProvider`) powinny być provider-agnostic — `String prId` zamiast `int prNumber`
+- Reguły domenowe (ActivityRule) instantiated w `@Configuration`, nie `@Component`
+
+### CORS
+- **NIE** używać `@CrossOrigin(origins = "*")` na controllerach — to nadpisuje globalny `CorsConfig`
+- Globalna konfiguracja CORS jest w `adapter/config/CorsConfig.java`
+
+### Walidacja input w REST
+- Path variables (`owner`, `repo`) wymagają walidacji regexem — mogą zawierać niebezpieczne znaki
+- Request params (`author`) wymagają limitu długości
+- Używać `InvalidRequestException` → łapany przez `GlobalExceptionHandler` → 400
+
+### Testy: mock musi pokrywać cały flow
+- Jeśli service woła `fetchMergeRequests` (lista) + `fetchMergeRequest` (detail), testy muszą mockować **oba**
+- Unit testy z mockami nie wyłapią problemów integracyjnych (np. GitHub API nie zwraca pól na liście) — rozważyć contract testy
+
 ## Recent Changes
+- 015-user-activity-health: Activity dashboard, 6 detection rules, heatmap, BDD + unit tests
 - 012-performance-profiling: `/profile` command, DiagnosticsController, Actuator+Micrometer, async-profiler integration, `scripts/profile.sh`
 - 007-llm-analysis-details: Detailed LLM analysis (categories, oversight, summary), dedicated AnalysisDetailPage, frontend tests (Vitest), Polish translation, MR metadata persistence fix, Claude CLI stdin fix
 - 003-cleanup: Split AnalyzeMrService (command/query), domain exceptions, validation, NPE fixes, GlobalExceptionHandler cleanup
