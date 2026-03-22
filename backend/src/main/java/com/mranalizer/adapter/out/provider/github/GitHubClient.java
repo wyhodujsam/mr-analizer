@@ -2,6 +2,7 @@ package com.mranalizer.adapter.out.provider.github;
 
 import com.mranalizer.adapter.out.provider.github.dto.GitHubFile;
 import com.mranalizer.adapter.out.provider.github.dto.GitHubPullRequest;
+import com.mranalizer.adapter.out.provider.github.dto.GitHubReview;
 import com.mranalizer.domain.exception.ProviderAuthException;
 import com.mranalizer.domain.exception.ProviderException;
 import com.mranalizer.domain.exception.ProviderRateLimitException;
@@ -143,6 +144,26 @@ public class GitHubClient {
         }
 
         return allFiles;
+    }
+
+    public List<GitHubReview> fetchReviews(String owner, String repo, int number) {
+        requireToken();
+        String url = UriComponentsBuilder.fromPath("/repos/{owner}/{repo}/pulls/{number}/reviews")
+                .queryParam("per_page", 100)
+                .buildAndExpand(owner, repo, number)
+                .toUriString();
+
+        var response = executeWithErrorHandling(() -> webClient.get()
+                .uri(url)
+                .retrieve()
+                .toEntityList(GitHubReview.class)
+                .block());
+
+        if (response == null || response.getBody() == null) {
+            return List.of();
+        }
+        checkRateLimit(response.getHeaders());
+        return response.getBody();
     }
 
     private <T> T executeWithErrorHandling(java.util.function.Supplier<T> request) {

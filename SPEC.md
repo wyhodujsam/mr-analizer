@@ -135,6 +135,20 @@ mr_analizer/
 │       │   │           ├── AnalysisResultRepository.java  # port: persystencja analiz
 │       │   │           └── SavedRepositoryPort.java       # port: persystencja repo
 │       │   │
+│       │   ├── domain/model/activity/         # modele modulu aktywnosci
+│       │   │   ├── Severity.java, FlagType.java, ActivityFlag.java
+│       │   │   ├── ContributorStats.java, DailyActivity.java
+│       │   │   └── ActivityReport.java, ContributorInfo.java
+│       │   ├── domain/port/in/activity/
+│       │   │   └── ActivityAnalysisUseCase.java
+│       │   ├── domain/port/out/activity/
+│       │   │   └── ReviewProvider.java
+│       │   ├── domain/service/activity/
+│       │   │   ├── ActivityAnalysisService.java
+│       │   │   ├── DateTimeUtils.java
+│       │   │   └── rules/ (ActivityRule, LargePrRule, QuickReviewRule, WeekendWorkRule,
+│       │   │               NightWorkRule, NoReviewRule, SelfMergeRule, AggregateRules)
+│       │   │
 │       │   ├── application/                 # USE CASES — orkiestracja
 │       │   │   ├── AnalyzeMrService.java    # analiza + cache detection + selekcja MR (implements AnalyzeMrUseCase)
 │       │   │   ├── GetAnalysisResultsService.java  # query: getAll, getReport, getResult (implements GetAnalysisResultsUseCase)
@@ -207,9 +221,17 @@ mr_analizer/
 │       │   └── SummaryCard.tsx             # 3 karty: automatable/maybe/not suitable
 │       ├── pages/
 │       │   ├── DashboardPage.tsx           # dwuetapowy flow: browse → analyze
-│       │   └── MrDetailPage.tsx            # szczegoly MR + score breakdown (opcjonalny)
+│       │   ├── MrDetailPage.tsx            # szczegoly MR + score breakdown (opcjonalny)
+│       │   └── ActivityDashboardPage.tsx   # dashboard aktywnosci kontrybutora
+│       ├── components/activity/
+│       │   ├── ContributorSelector.tsx     # dropdown kontrybutora
+│       │   ├── StatsCards.tsx              # karty statystyk + klikalne filtry severity
+│       │   ├── FlagsList.tsx               # tabela flag z filtrami
+│       │   ├── ActivityHeatmap.tsx         # SVG heatmapa (GitHub-style)
+│       │   └── DayDrillDown.tsx            # drill-down PR po kliknieciu dnia
 │       ├── types/
-│       │   └── index.ts                    # TypeScript interfaces
+│       │   ├── index.ts                    # TypeScript interfaces
+│       │   └── activity.ts                 # typy modulu aktywnosci
 │       └── styles/
 │           └── app.css                     # verdict colors, responsive
 │
@@ -236,6 +258,10 @@ GET    /api/summary/{reportId}       # podsumowanie (counts per verdict)
 GET    /api/repos                    # lista zapisanych repozytoriow
 POST   /api/repos                    # dodaj repo (body: projectSlug, provider)
 DELETE /api/repos/{id}               # usun repo z listy
+
+# Activity (odseparowany modul)
+GET    /api/activity/{owner}/{repo}/contributors      # lista kontrybutorów repo
+GET    /api/activity/{owner}/{repo}/report?author=     # raport aktywnosci (flagi, stats, heatmapa)
 ```
 
 ## GUI — flow uzytkownika
@@ -285,9 +311,10 @@ Konfiguracja regul w `application.yml` (exclude labels, min/max files, file exte
 
 ## Testy
 
-- **89 testow, 0 failures**
-- 29 scenariuszy BDD (Cucumber/Gherkin) w 5 plikach .feature
-- 60 testow jednostkowych i integracyjnych (JUnit 5 + Mockito)
+- **413 testow, 0 failures** (293 backend + 120 frontend)
+- 53 scenariusze BDD (Cucumber/Gherkin) w 8 plikach .feature
+- 240 testow jednostkowych i integracyjnych (JUnit 5 + Mockito)
+- 120 testow frontend (Vitest + React Testing Library)
 - Testy integracyjne: Spring Boot + H2 + MockBean provider
 
 ## Zrealizowane features
@@ -340,6 +367,27 @@ Narzedzie deweloperskie do profilowania wydajnosci:
 - async-profiler v3.0 — CPU/alloc flame graphs (zewnetrzne narzedzie CLI)
 - Raporty Markdown z flame graphs w `reports/` (gitignored)
 - +2 testy (unit DiagnosticsController)
+
+### 015-user-activity-health (DONE)
+
+Odseparowany modul analizy aktywnosci kontrybutora — wykrywanie nieprawidlowosci w procesie wytwórczym:
+
+**Reguly wykrywania (Strategy pattern):**
+- `LargePrRule` — PR >500 linii (warning), >1000 (critical)
+- `QuickReviewRule` — merge <10 min przy >50 liniach (warning), <5 min przy >100 (critical)
+- `WeekendWorkRule` — PR utworzony/zmergowany w weekend
+- `NightWorkRule` — PR utworzony/zmergowany 22:00-06:00
+- `NoReviewRule` — zmergowany PR bez zadnego review
+- `SelfMergeRule` — PR zatwierdzony tylko przez autora
+- `AggregateRules` — >30% PR weekendowych → warning
+
+**Frontend:**
+- Dashboard z selektorem kontrybutora, kartami statystyk
+- Heatmapa SVG (GitHub contribution graph style) — 13 tygodni, 5 poziomow koloru, tooltip, drill-down
+- Klikalne badge severity (filtr tabeli), dropdown kategorii
+- Route: `/activity` i `/activity/:owner/:repo`
+
+**Testy:** 36 unit testow regul + 7 BDD scenariuszy + 8 testow frontend (Vitest)
 
 ## Uwagi
 
