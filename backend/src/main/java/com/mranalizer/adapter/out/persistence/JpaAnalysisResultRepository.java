@@ -59,7 +59,7 @@ public class JpaAnalysisResultRepository implements AnalysisResultRepository {
 
     @Override
     public Optional<AnalysisReport> findById(Long id) {
-        return springRepo.findById(id).map(this::toDomain);
+        return springRepo.findByIdWithResults(id).map(this::toDomain);
     }
 
     @Override

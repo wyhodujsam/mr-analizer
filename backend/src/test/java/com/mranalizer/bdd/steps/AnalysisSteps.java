@@ -31,6 +31,9 @@ public class AnalysisSteps {
     private AnalyzeMrUseCase analyzeMrUseCase;
 
     @Autowired
+    private GetAnalysisResultsUseCase getAnalysisResultsUseCase;
+
+    @Autowired
     private MergeRequestProvider mergeRequestProvider;
 
     @Autowired
@@ -40,11 +43,13 @@ public class AnalysisSteps {
     private ScenarioContext scenarioContext;
 
     private AnalysisReport report;
+    private AnalysisReport retrievedReport;
     private Exception caughtException;
 
     @Before
     public void setUp() {
         report = null;
+        retrievedReport = null;
         caughtException = null;
 
         // Reset mocks before each scenario
@@ -131,8 +136,9 @@ public class AnalysisSteps {
 
     @Then("the analysis report should contain {int} results")
     public void reportShouldContainResults(int expectedCount) {
-        assertNotNull(report, "Analysis report should not be null");
-        assertEquals(expectedCount, report.getResults().size());
+        AnalysisReport target = retrievedReport != null ? retrievedReport : report;
+        assertNotNull(target, "Analysis report should not be null");
+        assertEquals(expectedCount, target.getResults().size());
     }
 
     @Then("the report project slug should be {string}")
@@ -230,6 +236,23 @@ public class AnalysisSteps {
         assertTrue(caughtException.getMessage().toLowerCase().contains("projectslug")
                         || caughtException.getMessage().toLowerCase().contains("project"),
                 "Error message should mention projectSlug, but was: " + caughtException.getMessage());
+    }
+
+    @When("I retrieve the analysis report by its ID")
+    public void retrieveAnalysisReportById() {
+        assertNotNull(report, "Must trigger analysis first");
+        retrievedReport = getAnalysisResultsUseCase.getReport(report.getId()).orElse(null);
+    }
+
+    @Then("each result should have a score and verdict")
+    public void eachResultShouldHaveScoreAndVerdict() {
+        AnalysisReport target = retrievedReport != null ? retrievedReport : report;
+        assertNotNull(target);
+        for (AnalysisResult r : target.getResults()) {
+            assertTrue(r.getScore() >= 0.0 && r.getScore() <= 1.0,
+                    "Score should be between 0 and 1, was: " + r.getScore());
+            assertNotNull(r.getVerdict(), "Verdict should not be null");
+        }
     }
 
     // --- Detailed LLM analysis steps ---

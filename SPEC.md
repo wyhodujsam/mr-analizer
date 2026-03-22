@@ -330,6 +330,17 @@ Sprint sprzatajacy — architektura i odpornosc (SDD/BDD code review → fix):
 
 **Testy:** +4 testy (1 BDD scenariusz + 5 unit testow w GetAnalysisResultsServiceTest - 2 przeniesione)
 
+### 012-performance-profiling (DONE)
+
+Narzedzie deweloperskie do profilowania wydajnosci:
+- Komenda Claude `/profile` — orkiestruje profilowanie i generuje rekomendacje
+- `scripts/profile.sh` — skrypt zbierajacy metryki (async-profiler, Actuator, Hibernate Stats)
+- `DiagnosticsController` (`@Profile("dev")`) — endpoint SQL stats z Hibernate Statistics
+- Spring Boot Actuator + Micrometer — metryki HTTP/JVM/GC
+- async-profiler v3.0 — CPU/alloc flame graphs (zewnetrzne narzedzie CLI)
+- Raporty Markdown z flame graphs w `reports/` (gitignored)
+- +2 testy (unit DiagnosticsController)
+
 ## Uwagi
 
 - Tokeny API wylacznie przez zmienne srodowiskowe (`export GITHUB_TOKEN=...`)

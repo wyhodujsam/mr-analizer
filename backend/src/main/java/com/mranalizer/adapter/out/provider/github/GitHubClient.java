@@ -28,23 +28,33 @@ public class GitHubClient {
     private static final Pattern LINK_NEXT_PATTERN = Pattern.compile("<([^>]+)>;\\s*rel=\"next\"");
 
     private final WebClient webClient;
+    private final boolean tokenConfigured;
 
     public GitHubClient(
             @Value("${mr-analizer.github.api-url:https://api.github.com}") String apiUrl,
             @Value("${mr-analizer.github.token:}") String token) {
 
+        this.tokenConfigured = token != null && !token.isBlank();
+
         WebClient.Builder builder = WebClient.builder()
                 .baseUrl(apiUrl)
                 .defaultHeader(HttpHeaders.ACCEPT, "application/vnd.github.v3+json");
 
-        if (token != null && !token.isBlank()) {
+        if (tokenConfigured) {
             builder.defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);
         }
 
         this.webClient = builder.build();
     }
 
+    private void requireToken() {
+        if (!tokenConfigured) {
+            throw new ProviderAuthException("GitHub token is not configured. Set GITHUB_TOKEN environment variable.");
+        }
+    }
+
     public List<GitHubPullRequest> fetchPullRequests(String owner, String repo, String state, int perPage, int limit) {
+        requireToken();
         List<GitHubPullRequest> allPrs = new ArrayList<>();
         String url = UriComponentsBuilder.fromPath("/repos/{owner}/{repo}/pulls")
                 .queryParam("state", state)
@@ -84,6 +94,7 @@ public class GitHubClient {
     }
 
     public GitHubPullRequest fetchPullRequest(String owner, String repo, int number) {
+        requireToken();
         String url = UriComponentsBuilder.fromPath("/repos/{owner}/{repo}/pulls/{number}")
                 .buildAndExpand(owner, repo, number)
                 .toUriString();
@@ -101,6 +112,7 @@ public class GitHubClient {
     }
 
     public List<GitHubFile> fetchFiles(String owner, String repo, int number) {
+        requireToken();
         List<GitHubFile> allFiles = new ArrayList<>();
         String url = UriComponentsBuilder.fromPath("/repos/{owner}/{repo}/pulls/{number}/files")
                 .queryParam("per_page", 100)

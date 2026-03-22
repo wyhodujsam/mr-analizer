@@ -23,8 +23,8 @@ class GitHubClientTest {
         server = new MockWebServer();
         server.start();
         String baseUrl = server.url("/").toString();
-        // Remove trailing slash to match how WebClient handles baseUrl
-        client = new GitHubClient(baseUrl, "");
+        // Use a test token to satisfy requireToken() check
+        client = new GitHubClient(baseUrl, "test-token");
     }
 
     @AfterEach
@@ -313,5 +313,37 @@ class GitHubClientTest {
 
         assertThrows(ProviderAuthException.class,
                 () -> client.fetchFiles("owner", "repo", 1));
+    }
+
+    // --- Token validation ---
+
+    @Test
+    void fetchPullRequests_noToken_throwsProviderAuthExceptionImmediately() throws IOException {
+        GitHubClient noTokenClient = new GitHubClient(server.url("/").toString(), "");
+
+        ProviderAuthException ex = assertThrows(ProviderAuthException.class,
+                () -> noTokenClient.fetchPullRequests("owner", "repo", "open", 30, 100));
+        assertTrue(ex.getMessage().contains("token"), "Message should mention token: " + ex.getMessage());
+        assertEquals(0, server.getRequestCount(), "No HTTP request should have been made");
+    }
+
+    @Test
+    void fetchPullRequest_noToken_throwsProviderAuthExceptionImmediately() throws IOException {
+        GitHubClient noTokenClient = new GitHubClient(server.url("/").toString(), null);
+
+        ProviderAuthException ex = assertThrows(ProviderAuthException.class,
+                () -> noTokenClient.fetchPullRequest("owner", "repo", 1));
+        assertTrue(ex.getMessage().contains("token"));
+        assertEquals(0, server.getRequestCount());
+    }
+
+    @Test
+    void fetchFiles_noToken_throwsProviderAuthExceptionImmediately() throws IOException {
+        GitHubClient noTokenClient = new GitHubClient(server.url("/").toString(), "  ");
+
+        ProviderAuthException ex = assertThrows(ProviderAuthException.class,
+                () -> noTokenClient.fetchFiles("owner", "repo", 1));
+        assertTrue(ex.getMessage().contains("token"));
+        assertEquals(0, server.getRequestCount());
     }
 }

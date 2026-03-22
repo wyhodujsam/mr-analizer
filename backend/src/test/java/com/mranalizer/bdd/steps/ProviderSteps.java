@@ -1,5 +1,6 @@
 package com.mranalizer.bdd.steps;
 
+import com.mranalizer.domain.exception.ProviderAuthException;
 import com.mranalizer.domain.exception.ProviderRateLimitException;
 import com.mranalizer.domain.model.*;
 import com.mranalizer.domain.port.out.MergeRequestProvider;
@@ -78,6 +79,13 @@ public class ProviderSteps {
     public void providerWithRateLimit() {
         when(mergeRequestProvider.fetchMergeRequests(any()))
                 .thenThrow(new ProviderRateLimitException("API rate limit exceeded. Try again in 60 seconds."));
+        when(mergeRequestProvider.getProviderName()).thenReturn("github");
+    }
+
+    @Given("a provider that has no authentication token configured")
+    public void providerWithNoToken() {
+        when(mergeRequestProvider.fetchMergeRequests(any()))
+                .thenThrow(new ProviderAuthException("GitHub token is not configured"));
         when(mergeRequestProvider.getProviderName()).thenReturn("github");
     }
 
@@ -167,6 +175,15 @@ public class ProviderSteps {
                 "Expected ProviderRateLimitException but got: " + caughtException.getClass().getName());
         assertTrue(caughtException.getMessage().contains("rate limit"),
                 "Error message should mention rate limit, but was: " + caughtException.getMessage());
+    }
+
+    @Then("the system should return an authentication error with message about missing token")
+    public void systemShouldReturnAuthError() {
+        assertNotNull(caughtException, "Expected an exception to be thrown");
+        assertTrue(caughtException instanceof ProviderAuthException,
+                "Expected ProviderAuthException but got: " + caughtException.getClass().getName());
+        assertTrue(caughtException.getMessage().contains("token"),
+                "Error message should mention token, but was: " + caughtException.getMessage());
     }
 
     // --- Helpers ---
