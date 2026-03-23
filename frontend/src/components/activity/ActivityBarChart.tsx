@@ -77,6 +77,8 @@ export default function ActivityBarChart({ dailyActivity }: Props) {
 
   const options = {
     responsive: true,
+    maintainAspectRatio: false,
+    barPercentage: 0.4,
     plugins: {
       title: { display: false },
       legend: { display: true, position: 'top' as const },
@@ -102,5 +104,9 @@ export default function ActivityBarChart({ dailyActivity }: Props) {
     },
   };
 
-  return <Bar data={data} options={options} />;
+  return (
+    <div style={{ maxHeight: 250 }}>
+      <Bar data={data} options={options} />
+    </div>
+  );
 }
