@@ -7,6 +7,7 @@ import StatsCards from '../components/activity/StatsCards';
 import FlagsList from '../components/activity/FlagsList';
 import ActivityHeatmap from '../components/activity/ActivityHeatmap';
 import DayDrillDown from '../components/activity/DayDrillDown';
+import ActivityBarChart from '../components/activity/ActivityBarChart';
 import type { SavedRepository } from '../types';
 import type { ContributorInfo, ActivityReport, DailyActivity, Severity } from '../types/activity';
 import { getRepos, addRepo, deleteRepo } from '../api/analysisApi';
@@ -182,6 +183,9 @@ export default function ActivityDashboardPage() {
           {selectedDay && (
             <DayDrillDown date={selectedDay.date} activity={selectedDay.activity} />
           )}
+
+          <h4 className="mt-4 mb-3">Aktywność w czasie</h4>
+          <ActivityBarChart dailyActivity={report.dailyActivity} />
 
           <h4 className="mt-4 mb-3">Wykryte nieprawidłowości</h4>
           <FlagsList
