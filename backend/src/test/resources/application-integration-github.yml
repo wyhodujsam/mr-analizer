@@ -1,0 +1,58 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:integration;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+  h2:
+    console:
+      enabled: false
+
+mr-analizer:
+  provider: github
+  github:
+    token: test-token
+    api-url: http://localhost:0  # overridden by @DynamicPropertySource
+  llm:
+    adapter: none
+  scoring:
+    base-score: 0.5
+    automatable-threshold: 0.7
+    maybe-threshold: 0.4
+  rules:
+    exclude:
+      min-changed-files: 2
+      max-changed-files: 50
+      file-extensions-only:
+        - ".env"
+        - ".lock"
+      labels:
+        - "hotfix"
+    boost:
+      description-keywords:
+        words:
+          - "refactor"
+          - "cleanup"
+        weight: 0.2
+      has-tests:
+        weight: 0.15
+      changed-files-range:
+        min: 3
+        max: 15
+        weight: 0.1
+      labels:
+        values:
+          - "tech-debt"
+        weight: 0.15
+    penalize:
+      large-diff:
+        threshold: 500
+        weight: 0.2
+      no-description:
+        weight: 0.3
+      touches-config:
+        weight: 0.1
