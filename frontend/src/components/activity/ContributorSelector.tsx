@@ -10,7 +10,7 @@ interface Props {
 
 export default function ContributorSelector({ contributors, selected, onChange, loading }: Props) {
   return (
-    <Form.Group className="mb-3">
+    <Form.Group className="mb-3" controlId="contributor-select">
       <Form.Label>Kontrybutor</Form.Label>
       <Form.Select
         value={selected}
