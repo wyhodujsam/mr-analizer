@@ -148,6 +148,16 @@ public class JpaAnalysisResultRepository implements AnalysisResultRepository {
             }
         }
 
+        // LLM cost
+        LlmCost cost = result.getLlmCost();
+        if (cost != null) {
+            entity.setLlmInputTokens(cost.inputTokens());
+            entity.setLlmOutputTokens(cost.outputTokens());
+            entity.setLlmCacheReadTokens(cost.cacheReadTokens());
+            entity.setLlmCacheCreationTokens(cost.cacheCreationTokens());
+            entity.setLlmCostUsd(cost.costUsd());
+        }
+
         return entity;
     }
 
@@ -210,6 +220,10 @@ public class JpaAnalysisResultRepository implements AnalysisResultRepository {
                 .whyLlmFriendly(fromJson(entity.getWhyLlmFriendly()))
                 .summaryTable(fromJsonGeneric(entity.getSummaryTable(), LIST_OF_SUMMARY))
                 .ruleResults(fromJsonGeneric(entity.getRuleResults(), LIST_OF_RULE_RESULT))
+                .llmCost(new LlmCost(
+                        entity.getLlmInputTokens(), entity.getLlmOutputTokens(),
+                        entity.getLlmCacheReadTokens(), entity.getLlmCacheCreationTokens(),
+                        entity.getLlmCostUsd()))
                 .build();
     }
 

@@ -33,6 +33,7 @@ export default function MrTable({ results, reportId }: Props) {
           <th>Autor</th>
           <th>Wynik</th>
           <th>Werdykt</th>
+          <th>Koszt LLM</th>
           <th><span className="visually-hidden">Akcje</span></th>
         </tr>
       </thead>
@@ -57,6 +58,9 @@ export default function MrTable({ results, reportId }: Props) {
               )}
             </td>
             <td>{item.verdict}</td>
+            <td className="text-muted small">
+              {item.llmCost ? `$${item.llmCost.costUsd.toFixed(4)}` : '—'}
+            </td>
             <td onClick={(e) => e.stopPropagation()}>
               {item.hasDetailedAnalysis && (
                 <Button

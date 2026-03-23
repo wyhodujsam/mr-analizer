@@ -35,7 +35,8 @@ public record MrDetailResponse(
         List<HumanOversightItem> humanOversightRequired,
         List<String> whyLlmFriendly,
         List<SummaryAspect> summaryTable,
-        boolean hasDetailedAnalysis
+        boolean hasDetailedAnalysis,
+        AnalysisResponse.LlmCostDto llmCost
 ) {
 
     public record ScoreBreakdownEntry(
@@ -100,7 +101,13 @@ public record MrDetailResponse(
                 result.getHumanOversightRequired(),
                 result.getWhyLlmFriendly(),
                 result.getSummaryTable(),
-                result.hasDetailedAnalysis()
+                result.hasDetailedAnalysis(),
+                result.getLlmCost() != null && result.getLlmCost().totalTokens() > 0
+                        ? new AnalysisResponse.LlmCostDto(
+                                result.getLlmCost().inputTokens(), result.getLlmCost().outputTokens(),
+                                result.getLlmCost().cacheReadTokens(), result.getLlmCost().cacheCreationTokens(),
+                                result.getLlmCost().costUsd())
+                        : null
         );
     }
 

@@ -220,6 +220,22 @@ export default function AnalysisDetailPage() {
         </Card>
       )}
 
+      {/* LLM Cost */}
+      {detail.llmCost && (
+        <Card className="mb-4">
+          <Card.Header>Koszt analizy LLM</Card.Header>
+          <Card.Body>
+            <div className="d-flex gap-4 flex-wrap">
+              <div><strong>${detail.llmCost.costUsd.toFixed(4)}</strong> <span className="text-muted">koszt</span></div>
+              <div><strong>{detail.llmCost.inputTokens.toLocaleString()}</strong> <span className="text-muted">input</span></div>
+              <div><strong>{detail.llmCost.outputTokens.toLocaleString()}</strong> <span className="text-muted">output</span></div>
+              <div><strong>{detail.llmCost.cacheReadTokens.toLocaleString()}</strong> <span className="text-muted">cache read</span></div>
+              <div><strong>{detail.llmCost.cacheCreationTokens.toLocaleString()}</strong> <span className="text-muted">cache creation</span></div>
+            </div>
+          </Card.Body>
+        </Card>
+      )}
+
       {/* External link */}
       <div className="mb-4">
         <a href={detail.url} target="_blank" rel="noopener noreferrer" className="btn btn-outline-primary">
