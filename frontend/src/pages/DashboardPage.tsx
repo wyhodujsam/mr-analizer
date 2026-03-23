@@ -34,7 +34,7 @@ export default function DashboardPage() {
   const [after, setAfter] = useState('');
   const [before, setBefore] = useState('');
   const [limit, setLimit] = useState(100);
-  const [useLlm, setUseLlm] = useState(false);
+  const [useLlm, setUseLlm] = useState(true);
 
   const [selectedMrIds, setSelectedMrIds] = useState<Set<string>>(new Set());
 

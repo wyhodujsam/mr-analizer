@@ -18,8 +18,29 @@ public class PromptBuilder {
     private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\{\\{(\\w+)}}");
 
     public static final String DEFAULT_TEMPLATE =
-            "Przeanalizuj tego Pull Requesta pod katem potencjalu automatyzacji przez LLM (np. Claude Code). " +
-            "Podaj szczegolowa, strukturyzowana ocene. Odpowiadaj po polsku.\n\n" +
+            "Przeanalizuj tego Pull Requesta pod katem OPLACALNOSCI automatyzacji przez LLM (np. Claude Code). " +
+            "Nie chodzi tylko o to czy LLM MOZE to zrobic, ale czy WARTO to automatyzowac. Odpowiadaj po polsku.\n\n" +
+            "KLUCZOWE KRYTERIA OCENY:\n" +
+            "1. KOSZT TOKENOW vs KOSZT RECZNY — LLM musi wczytac repozytorium, zrozumiec kontekst, wygenerowac zmiane. " +
+            "Jesli zmiana to 1-5 linii w znanym pliku, developer zrobi to szybciej niz napisanie specyfikacji dla LLM.\n" +
+            "2. TRUDNOSC NAPISANIA SPECYFIKACJI — jesli opisanie zadania dla LLM jest trudniejsze niz samo wykonanie " +
+            "(np. 'zmien tytul na X' vs refaktoring 20 plikow), to automatyzacja nie ma sensu.\n" +
+            "3. KONTEKST DEWELOPERSKI — punktowe zmiany (tytul, config, 1 linia) w duzym repozytorium sa latwiejsze " +
+            "recznie dla developera ktory zna repo, niz dla LLM ktory musi odkryc kontekst.\n" +
+            "4. SKALA ZMIANY — male zmiany (<10 linii, 1-2 pliki) to zwykle strata tokenow. " +
+            "Automatyzacja oplaca sie od ~50 linii lub ~3 plikow, gdy jest wzorzec do powielenia.\n" +
+            "5. POWTARZALNOSC — jesli zmiana jest jednorazowa (rename, config), LLM nie wnosi wartosci. " +
+            "Jesli jest wzorzec (N plikow do zmiany wg tego samego schematu), LLM jest idealny.\n\n" +
+            "PRZYKLADY NIOPLACALNYCH ZMIAN (scoreAdjustment ujemny):\n" +
+            "- Zmiana tytulu/nazwy w 1 pliku — developer zrobi to w 10 sekund\n" +
+            "- Zmiana jednej linii w konfiguracji — banalnie proste recznie\n" +
+            "- Kosmetyczne poprawki (whitespace, formatowanie) — IDE zrobi to automatycznie\n" +
+            "- Zmiana stalej/wartosci w 1 miejscu — wyszukaj-zamien\n\n" +
+            "PRZYKLADY OPLACALNYCH ZMIAN (scoreAdjustment dodatni):\n" +
+            "- Refaktoring wzorca w wielu plikach (np. CQRS split, nowa hierarchia wyjatkow)\n" +
+            "- Dodanie testow do istniejacego kodu (LLM generuje testy z kontekstu)\n" +
+            "- Migracja API/biblioteki w wielu miejscach\n" +
+            "- Nowy feature z jasna specyfikacja (endpoint + model + testy)\n\n" +
             "Dane PR:\n" +
             "Tytul: {{title}}\n" +
             "Opis: {{description}}\n" +
@@ -33,14 +54,14 @@ public class PromptBuilder {
             "Branch docelowy: {{targetBranch}}\n\n" +
             "Odpowiedz WYLACZNIE poprawnym obiektem JSON (bez markdown, bez dodatkowego tekstu) o dokladnie takiej strukturze:\n" +
             "{\n" +
-            "  \"scoreAdjustment\": <liczba od -0.5 do 0.5>,\n" +
-            "  \"comment\": \"<podsumowanie w 1-2 zdaniach, po polsku>\",\n" +
-            "  \"overallAutomatability\": <liczba calkowita 0-100, procent szansy ze LLM dobrze to wykona>,\n" +
+            "  \"scoreAdjustment\": <liczba od -0.5 do 0.5 — UJEMNA jesli zmiana jest za mala/prosta zeby oplacalo sie ja automatyzowac>,\n" +
+            "  \"comment\": \"<podsumowanie w 1-2 zdaniach — WYJASNI czy automatyzacja sie OPLACA, nie tylko czy jest mozliwa, po polsku>\",\n" +
+            "  \"overallAutomatability\": <liczba calkowita 0-100 — UWZGLEDNIJ oplacalnosc: 1-liniowa zmiana = niski wynik mimo ze technicznie prosta>,\n" +
             "  \"categories\": [\n" +
             "    {\n" +
-            "      \"name\": \"<kategoria zmian, np. 'Podzial klasy CQRS', 'Hierarchia wyjatkow'>\",\n" +
-            "      \"score\": <liczba calkowita 0-100, na ile ta kategoria jest automatyzowalna>,\n" +
-            "      \"reasoning\": \"<dlaczego taki wynik — wymien konkretne wzorce kodu, technologie lub architekture, po polsku>\"\n" +
+            "      \"name\": \"<kategoria zmian>\",\n" +
+            "      \"score\": <liczba calkowita 0-100 — UWZGLEDNIJ koszt tokenow vs zysk>,\n" +
+            "      \"reasoning\": \"<dlaczego taki wynik — wymien koszt tokenow, trudnosc specyfikacji, alternatywe reczna, po polsku>\"\n" +
             "    }\n" +
             "  ],\n" +
             "  \"humanOversightRequired\": [\n" +
@@ -52,9 +73,9 @@ public class PromptBuilder {
             "  \"whyLlmFriendly\": [\"<powod 1, po polsku>\", \"<powod 2, po polsku>\"],\n" +
             "  \"summaryTable\": [\n" +
             "    {\n" +
-            "      \"aspect\": \"<np. 'Wykonanie kodu', 'Podejmowanie decyzji', 'Pisanie testow', 'Review'>\",\n" +
+            "      \"aspect\": \"<np. 'Wykonanie kodu', 'Podejmowanie decyzji', 'Pisanie testow', 'Review', 'Oplacalnosc automatyzacji'>\",\n" +
             "      \"score\": <liczba calkowita 0-100 lub null jesli nie da sie ocenic>,\n" +
-            "      \"note\": \"<krotka uwaga, po polsku>\"\n" +
+            "      \"note\": \"<krotka uwaga — w aspekcie 'Oplacalnosc' wyjasnij koszt tokenow vs zysk, po polsku>\"\n" +
             "    }\n" +
             "  ]\n" +
             "}";
