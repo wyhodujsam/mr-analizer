@@ -6,7 +6,11 @@ import type { DailyActivity } from '../types/activity';
 // Mock chart.js to avoid canvas issues in jsdom
 vi.mock('react-chartjs-2', () => ({
   Bar: (props: any) => (
-    <div data-testid="bar-chart" data-labels={JSON.stringify(props.data.labels)}>
+    <div
+      data-testid="bar-chart"
+      data-labels={JSON.stringify(props.data.labels)}
+      data-datasets={props.data.datasets.length}
+    >
       Bar Chart
     </div>
   ),
@@ -22,6 +26,8 @@ describe('ActivityBarChart', () => {
     const chart = screen.getByTestId('bar-chart');
     const labels = JSON.parse(chart.getAttribute('data-labels')!);
     expect(labels).toEqual(['2026-03-10', '2026-03-15']);
+    // Should have 2 datasets: bars + trend line
+    expect(chart.getAttribute('data-datasets')).toBe('2');
   });
 
   it('returns null for empty data', () => {
