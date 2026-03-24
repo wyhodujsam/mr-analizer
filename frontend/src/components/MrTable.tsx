@@ -59,7 +59,7 @@ export default function MrTable({ results, reportId }: Props) {
             </td>
             <td>{item.verdict}</td>
             <td className="text-muted small">
-              {item.llmCost ? `$${item.llmCost.costUsd.toFixed(4)}` : '—'}
+              {item.llmCost ? `$${item.llmCost.costUsd.toFixed(4)} (${(item.llmCost.durationMs / 1000).toFixed(0)}s)` : '—'}
             </td>
             <td onClick={(e) => e.stopPropagation()}>
               {item.hasDetailedAnalysis && (

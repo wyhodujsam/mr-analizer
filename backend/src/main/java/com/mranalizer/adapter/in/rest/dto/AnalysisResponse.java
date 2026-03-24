@@ -37,7 +37,7 @@ public record AnalysisResponse(
             var cost = r.getLlmCost();
             LlmCostDto costDto = cost != null && cost.totalTokens() > 0
                     ? new LlmCostDto(cost.inputTokens(), cost.outputTokens(),
-                            cost.cacheReadTokens(), cost.cacheCreationTokens(), cost.costUsd())
+                            cost.cacheReadTokens(), cost.cacheCreationTokens(), cost.costUsd(), cost.durationMs())
                     : null;
             return new ResultItem(
                     r.getId(),
@@ -61,7 +61,8 @@ public record AnalysisResponse(
             int outputTokens,
             int cacheReadTokens,
             int cacheCreationTokens,
-            double costUsd
+            double costUsd,
+            int durationMs
     ) {}
 
     public static AnalysisResponse from(AnalysisReport report) {

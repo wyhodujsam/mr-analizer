@@ -106,7 +106,7 @@ public record MrDetailResponse(
                         ? new AnalysisResponse.LlmCostDto(
                                 result.getLlmCost().inputTokens(), result.getLlmCost().outputTokens(),
                                 result.getLlmCost().cacheReadTokens(), result.getLlmCost().cacheCreationTokens(),
-                                result.getLlmCost().costUsd())
+                                result.getLlmCost().costUsd(), result.getLlmCost().durationMs())
                         : null
         );
     }

@@ -5,10 +5,11 @@ public record LlmCost(
         int outputTokens,
         int cacheReadTokens,
         int cacheCreationTokens,
-        double costUsd
+        double costUsd,
+        int durationMs
 ) {
     public static LlmCost empty() {
-        return new LlmCost(0, 0, 0, 0, 0.0);
+        return new LlmCost(0, 0, 0, 0, 0.0, 0);
     }
 
     public int totalTokens() {

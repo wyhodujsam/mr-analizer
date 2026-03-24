@@ -156,6 +156,7 @@ public class JpaAnalysisResultRepository implements AnalysisResultRepository {
             entity.setLlmCacheReadTokens(cost.cacheReadTokens());
             entity.setLlmCacheCreationTokens(cost.cacheCreationTokens());
             entity.setLlmCostUsd(cost.costUsd());
+            entity.setLlmDurationMs(cost.durationMs());
         }
 
         return entity;
@@ -223,7 +224,7 @@ public class JpaAnalysisResultRepository implements AnalysisResultRepository {
                 .llmCost(new LlmCost(
                         entity.getLlmInputTokens(), entity.getLlmOutputTokens(),
                         entity.getLlmCacheReadTokens(), entity.getLlmCacheCreationTokens(),
-                        entity.getLlmCostUsd()))
+                        entity.getLlmCostUsd(), entity.getLlmDurationMs()))
                 .build();
     }
 

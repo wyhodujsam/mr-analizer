@@ -6,6 +6,7 @@ export interface LlmCost {
   cacheReadTokens: number;
   cacheCreationTokens: number;
   costUsd: number;
+  durationMs: number;
 }
 
 export interface AnalysisCategory {

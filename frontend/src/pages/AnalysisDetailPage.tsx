@@ -231,6 +231,7 @@ export default function AnalysisDetailPage() {
               <div><strong>{detail.llmCost.outputTokens.toLocaleString()}</strong> <span className="text-muted">output</span></div>
               <div><strong>{detail.llmCost.cacheReadTokens.toLocaleString()}</strong> <span className="text-muted">cache read</span></div>
               <div><strong>{detail.llmCost.cacheCreationTokens.toLocaleString()}</strong> <span className="text-muted">cache creation</span></div>
+              <div><strong>{(detail.llmCost.durationMs / 1000).toFixed(1)}s</strong> <span className="text-muted">czas</span></div>
             </div>
           </Card.Body>
         </Card>

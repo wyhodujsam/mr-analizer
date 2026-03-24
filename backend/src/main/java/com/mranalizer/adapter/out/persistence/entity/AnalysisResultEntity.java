@@ -70,6 +70,7 @@ public class AnalysisResultEntity {
     private int llmCacheReadTokens;
     private int llmCacheCreationTokens;
     private double llmCostUsd;
+    private int llmDurationMs;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "report_id")
@@ -178,6 +179,9 @@ public class AnalysisResultEntity {
 
     public int getLlmCacheCreationTokens() { return llmCacheCreationTokens; }
     public void setLlmCacheCreationTokens(int llmCacheCreationTokens) { this.llmCacheCreationTokens = llmCacheCreationTokens; }
+
+    public int getLlmDurationMs() { return llmDurationMs; }
+    public void setLlmDurationMs(int llmDurationMs) { this.llmDurationMs = llmDurationMs; }
 
     public double getLlmCostUsd() { return llmCostUsd; }
     public void setLlmCostUsd(double llmCostUsd) { this.llmCostUsd = llmCostUsd; }

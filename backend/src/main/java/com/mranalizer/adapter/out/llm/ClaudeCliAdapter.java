@@ -166,8 +166,9 @@ public class ClaudeCliAdapter implements LlmAnalyzer {
             int cacheRead = usage.has("cache_read_input_tokens") ? usage.get("cache_read_input_tokens").asInt(0) : 0;
             int cacheCreation = usage.has("cache_creation_input_tokens") ? usage.get("cache_creation_input_tokens").asInt(0) : 0;
             double costUsd = root.has("total_cost_usd") ? root.get("total_cost_usd").asDouble(0.0) : 0.0;
+            int durationMs = root.has("duration_ms") ? root.get("duration_ms").asInt(0) : 0;
 
-            return new LlmCost(inputTokens, outputTokens, cacheRead, cacheCreation, costUsd);
+            return new LlmCost(inputTokens, outputTokens, cacheRead, cacheCreation, costUsd, durationMs);
         } catch (Exception e) {
             log.warn("Failed to parse LLM cost: {}", e.getMessage());
             return LlmCost.empty();
