@@ -92,6 +92,7 @@ public class ScoringEngine {
                 .humanOversightRequired(llmAssessment.humanOversightRequired())
                 .whyLlmFriendly(llmAssessment.whyLlmFriendly())
                 .summaryTable(llmAssessment.summaryTable())
+                .llmCost(llmAssessment.cost())
                 .build();
     }
 

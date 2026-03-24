@@ -30,9 +30,15 @@ public record AnalysisResponse(
             List<String> matchedRules,
             String llmComment,
             String url,
-            boolean hasDetailedAnalysis
+            boolean hasDetailedAnalysis,
+            LlmCostDto llmCost
     ) {
         public static ResultItem from(AnalysisResult r) {
+            var cost = r.getLlmCost();
+            LlmCostDto costDto = cost != null && cost.totalTokens() > 0
+                    ? new LlmCostDto(cost.inputTokens(), cost.outputTokens(),
+                            cost.cacheReadTokens(), cost.cacheCreationTokens(), cost.costUsd(), cost.durationMs())
+                    : null;
             return new ResultItem(
                     r.getId(),
                     r.getMergeRequest().getExternalId(),
@@ -44,10 +50,20 @@ public record AnalysisResponse(
                     r.getMatchedRules(),
                     r.getLlmComment(),
                     r.getMergeRequest().getUrl(),
-                    r.hasDetailedAnalysis()
+                    r.hasDetailedAnalysis(),
+                    costDto
             );
         }
     }
+
+    public record LlmCostDto(
+            int inputTokens,
+            int outputTokens,
+            int cacheReadTokens,
+            int cacheCreationTokens,
+            double costUsd,
+            int durationMs
+    ) {}
 
     public static AnalysisResponse from(AnalysisReport report) {
         List<ResultItem> items = report.getResults() != null

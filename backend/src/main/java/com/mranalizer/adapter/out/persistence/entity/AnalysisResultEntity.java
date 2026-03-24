@@ -64,6 +64,14 @@ public class AnalysisResultEntity {
     @Column(columnDefinition = "TEXT")
     private String ruleResults;
 
+    // LLM cost tracking
+    private int llmInputTokens;
+    private int llmOutputTokens;
+    private int llmCacheReadTokens;
+    private int llmCacheCreationTokens;
+    private double llmCostUsd;
+    private int llmDurationMs;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "report_id")
     private AnalysisReportEntity report;
@@ -159,6 +167,24 @@ public class AnalysisResultEntity {
 
     public String getRuleResults() { return ruleResults; }
     public void setRuleResults(String ruleResults) { this.ruleResults = ruleResults; }
+
+    public int getLlmInputTokens() { return llmInputTokens; }
+    public void setLlmInputTokens(int llmInputTokens) { this.llmInputTokens = llmInputTokens; }
+
+    public int getLlmOutputTokens() { return llmOutputTokens; }
+    public void setLlmOutputTokens(int llmOutputTokens) { this.llmOutputTokens = llmOutputTokens; }
+
+    public int getLlmCacheReadTokens() { return llmCacheReadTokens; }
+    public void setLlmCacheReadTokens(int llmCacheReadTokens) { this.llmCacheReadTokens = llmCacheReadTokens; }
+
+    public int getLlmCacheCreationTokens() { return llmCacheCreationTokens; }
+    public void setLlmCacheCreationTokens(int llmCacheCreationTokens) { this.llmCacheCreationTokens = llmCacheCreationTokens; }
+
+    public int getLlmDurationMs() { return llmDurationMs; }
+    public void setLlmDurationMs(int llmDurationMs) { this.llmDurationMs = llmDurationMs; }
+
+    public double getLlmCostUsd() { return llmCostUsd; }
+    public void setLlmCostUsd(double llmCostUsd) { this.llmCostUsd = llmCostUsd; }
 
     public AnalysisReportEntity getReport() { return report; }
     public void setReport(AnalysisReportEntity report) { this.report = report; }

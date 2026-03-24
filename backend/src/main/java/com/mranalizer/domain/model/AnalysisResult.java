@@ -22,6 +22,7 @@ public class AnalysisResult {
     private final List<HumanOversightItem> humanOversightRequired;
     private final List<String> whyLlmFriendly;
     private final List<SummaryAspect> summaryTable;
+    private final LlmCost llmCost;
 
     private AnalysisResult(Builder builder) {
         this.id = builder.id;
@@ -38,6 +39,7 @@ public class AnalysisResult {
         this.humanOversightRequired = builder.humanOversightRequired != null ? builder.humanOversightRequired : List.of();
         this.whyLlmFriendly = builder.whyLlmFriendly != null ? builder.whyLlmFriendly : List.of();
         this.summaryTable = builder.summaryTable != null ? builder.summaryTable : List.of();
+        this.llmCost = builder.llmCost != null ? builder.llmCost : LlmCost.empty();
     }
 
     public Long getId() { return id; }
@@ -54,6 +56,7 @@ public class AnalysisResult {
     public List<HumanOversightItem> getHumanOversightRequired() { return humanOversightRequired; }
     public List<String> getWhyLlmFriendly() { return whyLlmFriendly; }
     public List<SummaryAspect> getSummaryTable() { return summaryTable; }
+    public LlmCost getLlmCost() { return llmCost; }
 
     public boolean hasDetailedAnalysis() {
         return overallAutomatability > 0 || !categories.isEmpty();
@@ -78,6 +81,7 @@ public class AnalysisResult {
         private List<HumanOversightItem> humanOversightRequired;
         private List<String> whyLlmFriendly;
         private List<SummaryAspect> summaryTable;
+        private LlmCost llmCost;
 
         private Builder() {}
 
@@ -95,6 +99,7 @@ public class AnalysisResult {
         public Builder humanOversightRequired(List<HumanOversightItem> humanOversightRequired) { this.humanOversightRequired = humanOversightRequired; return this; }
         public Builder whyLlmFriendly(List<String> whyLlmFriendly) { this.whyLlmFriendly = whyLlmFriendly; return this; }
         public Builder summaryTable(List<SummaryAspect> summaryTable) { this.summaryTable = summaryTable; return this; }
+        public Builder llmCost(LlmCost llmCost) { this.llmCost = llmCost; return this; }
 
         public AnalysisResult build() {
             return new AnalysisResult(this);

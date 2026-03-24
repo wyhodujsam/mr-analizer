@@ -141,8 +141,10 @@ public class ClaudeCliAdapter implements LlmAnalyzer {
                 List<String> whyLlmFriendly = parseStringArray(parsed, "whyLlmFriendly");
                 List<SummaryAspect> summaryTable = parseSummaryTable(parsed);
 
+                LlmCost cost = parseCost(root);
+
                 return new LlmAssessment(score, comment, PROVIDER,
-                        overallAutomatability, categories, humanOversight, whyLlmFriendly, summaryTable);
+                        overallAutomatability, categories, humanOversight, whyLlmFriendly, summaryTable, cost);
             }
 
             log.warn("Could not find JSON in Claude CLI response: {}", rawOutput);
@@ -151,6 +153,25 @@ public class ClaudeCliAdapter implements LlmAnalyzer {
         } catch (Exception e) {
             log.warn("Failed to parse Claude CLI response: {}", e.getMessage());
             return new LlmAssessment(0.0, "LLM error: " + e.getMessage(), PROVIDER);
+        }
+    }
+
+    private LlmCost parseCost(JsonNode root) {
+        try {
+            JsonNode usage = root.get("usage");
+            if (usage == null) return LlmCost.empty();
+
+            int inputTokens = usage.has("input_tokens") ? usage.get("input_tokens").asInt(0) : 0;
+            int outputTokens = usage.has("output_tokens") ? usage.get("output_tokens").asInt(0) : 0;
+            int cacheRead = usage.has("cache_read_input_tokens") ? usage.get("cache_read_input_tokens").asInt(0) : 0;
+            int cacheCreation = usage.has("cache_creation_input_tokens") ? usage.get("cache_creation_input_tokens").asInt(0) : 0;
+            double costUsd = root.has("total_cost_usd") ? root.get("total_cost_usd").asDouble(0.0) : 0.0;
+            int durationMs = root.has("duration_ms") ? root.get("duration_ms").asInt(0) : 0;
+
+            return new LlmCost(inputTokens, outputTokens, cacheRead, cacheCreation, costUsd, durationMs);
+        } catch (Exception e) {
+            log.warn("Failed to parse LLM cost: {}", e.getMessage());
+            return LlmCost.empty();
         }
     }
 

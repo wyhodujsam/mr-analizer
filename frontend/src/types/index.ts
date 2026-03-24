@@ -1,5 +1,14 @@
 export type Verdict = 'AUTOMATABLE' | 'MAYBE' | 'NOT_SUITABLE';
 
+export interface LlmCost {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheCreationTokens: number;
+  costUsd: number;
+  durationMs: number;
+}
+
 export interface AnalysisCategory {
   name: string;
   score: number;
@@ -29,6 +38,7 @@ export interface AnalysisResultItem {
   llmComment: string | null;
   url: string;
   hasDetailedAnalysis: boolean;
+  llmCost: LlmCost | null;
 }
 
 export interface AnalysisResponse {
@@ -77,6 +87,7 @@ export interface MrDetailResponse {
   whyLlmFriendly: string[] | null;
   summaryTable: SummaryAspect[] | null;
   hasDetailedAnalysis: boolean;
+  llmCost: LlmCost | null;
 }
 
 export interface AnalysisRequest {
