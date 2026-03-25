@@ -13,6 +13,7 @@ public record ActivityReportResponse(
         String contributor,
         String projectSlug,
         StatsDto stats,
+        ProductivityDto productivity,
         List<FlagDto> flags,
         Map<String, DailyActivityDto> dailyActivity,
         List<PullRequestDto> pullRequests
@@ -27,6 +28,8 @@ public record ActivityReportResponse(
                 report.getStats().flagCountBySeverity().entrySet().stream()
                         .collect(Collectors.toMap(e -> e.getKey().name(), Map.Entry::getValue))
         );
+
+        ProductivityDto productivity = mapProductivity(report.getStats().productivity());
 
         List<FlagDto> flags = report.getFlags().stream()
                 .map(f -> new FlagDto(f.type().name(), f.type().getDisplayName(),
@@ -55,7 +58,48 @@ public record ActivityReportResponse(
                 .toList();
 
         return new ActivityReportResponse(report.getContributor(), report.getProjectSlug(),
-                stats, flags, daily, prs);
+                stats, productivity, flags, daily, prs);
+    }
+
+    private static ProductivityDto mapProductivity(ProductivityMetrics p) {
+        if (p == null) return null;
+
+        VelocityDto velocity = new VelocityDto(
+                p.velocity().prsPerWeek(),
+                p.velocity().weeklyBreakdown().stream()
+                        .map(w -> new WeeklyCountDto(w.weekStart().toString(), w.count()))
+                        .toList(),
+                p.velocity().trend()
+        );
+
+        CycleTimeDto cycleTime = new CycleTimeDto(
+                p.cycleTime().avgHours(),
+                p.cycleTime().medianHours(),
+                p.cycleTime().p90Hours()
+        );
+
+        ImpactDto impact = new ImpactDto(
+                p.impact().totalAdditions(),
+                p.impact().totalDeletions(),
+                p.impact().totalLines(),
+                p.impact().avgLinesPerPr(),
+                p.impact().addDeleteRatio()
+        );
+
+        ChurnDto churn = new ChurnDto(
+                p.codeChurn().churnRatio(),
+                p.codeChurn().label()
+        );
+
+        ReviewEngagementDto engagement = p.reviewEngagement() != null
+                ? new ReviewEngagementDto(
+                        p.reviewEngagement().reviewsGiven(),
+                        p.reviewEngagement().reviewsReceived(),
+                        p.reviewEngagement().ratio(),
+                        p.reviewEngagement().label())
+                : null;
+
+        return new ProductivityDto(velocity, cycleTime, impact, churn, engagement);
     }
 
     public record StatsDto(
@@ -65,6 +109,32 @@ public record ActivityReportResponse(
             double weekendPercentage,
             Map<String, Long> flagCounts
     ) {}
+
+    public record ProductivityDto(
+            VelocityDto velocity,
+            CycleTimeDto cycleTime,
+            ImpactDto impact,
+            ChurnDto codeChurn,
+            ReviewEngagementDto reviewEngagement
+    ) {}
+
+    public record VelocityDto(
+            double prsPerWeek,
+            List<WeeklyCountDto> weeklyBreakdown,
+            String trend
+    ) {}
+
+    public record WeeklyCountDto(String weekStart, int count) {}
+
+    public record CycleTimeDto(double avgHours, double medianHours, double p90Hours) {}
+
+    public record ImpactDto(int totalAdditions, int totalDeletions, int totalLines,
+                            double avgLinesPerPr, double addDeleteRatio) {}
+
+    public record ChurnDto(double churnRatio, String label) {}
+
+    public record ReviewEngagementDto(int reviewsGiven, int reviewsReceived,
+                                       double ratio, String label) {}
 
     public record FlagDto(
             String type,

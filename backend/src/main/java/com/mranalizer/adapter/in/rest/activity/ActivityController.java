@@ -49,6 +49,22 @@ public class ActivityController {
         return ResponseEntity.ok(ActivityReportResponse.from(report));
     }
 
+    @PostMapping("/{owner}/{repo}/refresh")
+    public ResponseEntity<Void> refreshCache(
+            @PathVariable String owner, @PathVariable String repo) {
+        String projectSlug = validateSlug(owner, repo);
+        activityAnalysis.refreshCache(projectSlug);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{owner}/{repo}/cache")
+    public ResponseEntity<Void> invalidateCache(
+            @PathVariable String owner, @PathVariable String repo) {
+        String projectSlug = validateSlug(owner, repo);
+        activityAnalysis.invalidateCache(projectSlug);
+        return ResponseEntity.noContent().build();
+    }
+
     private String validateSlug(String owner, String repo) {
         if (!SLUG_PART.matcher(owner).matches() || !SLUG_PART.matcher(repo).matches()) {
             throw new InvalidRequestException("Invalid repository slug: " + owner + "/" + repo);

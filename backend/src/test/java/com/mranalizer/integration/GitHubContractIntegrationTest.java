@@ -1,8 +1,10 @@
 package com.mranalizer.integration;
 
 import com.mranalizer.adapter.in.rest.dto.MrBrowseResponse;
+import com.mranalizer.domain.port.in.activity.ActivityAnalysisUseCase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 
@@ -13,8 +15,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class GitHubContractIntegrationTest extends GitHubIntegrationTestBase {
 
+    @Autowired
+    private ActivityAnalysisUseCase activityAnalysis;
+
     @BeforeEach
     void setupRoutes() {
+        activityAnalysis.invalidateCache("test/repo");
         setupDispatcher(Map.of(
                 "/repos/test/repo/pulls\\?.*", "pr-list-3.json",
                 "/repos/test/repo/pulls/1$", "pr-single-1.json",

@@ -103,13 +103,33 @@ Domain-level exceptions live in `domain/exception/` — adapters wrap provider-s
 
 ## Activity Module (odseparowany)
 
-Moduł analizy aktywności kontrybutora — wykrywanie nieprawidłowości (za duże PR-y, rubber-stamping, praca weekendowa, brak review).
+Moduł analizy aktywności kontrybutora — wykrywanie nieprawidłowości + metryki wydajności.
 
 - **Domain**: `domain/model/activity/`, `domain/service/activity/`, `domain/port/in/activity/`, `domain/port/out/activity/`
 - **Rules** (Strategy pattern): `LargePrRule`, `QuickReviewRule`, `WeekendWorkRule`, `NightWorkRule`, `NoReviewRule`, `SelfMergeRule`, `AggregateRules`
-- **REST API**: `ActivityController` — `/api/activity/{owner}/{repo}/contributors`, `/api/activity/{owner}/{repo}/report?author=`
-- **Frontend**: `/activity` route, `ActivityDashboardPage`, heatmapa SVG (GitHub-style), drill-down
-- **GitHub adapter**: `GitHubReviewAdapter` — fetches PR reviews via `/repos/{owner}/{repo}/pulls/{number}/reviews`
+- **REST API**: `ActivityController`:
+  - `GET /api/activity/{owner}/{repo}/contributors` — lista kontrybutorów
+  - `GET /api/activity/{owner}/{repo}/report?author=` — raport aktywności + metryki
+  - `POST /api/activity/{owner}/{repo}/refresh` — incremental cache update
+  - `DELETE /api/activity/{owner}/{repo}/cache` — full cache invalidation
+- **Cache**: In-memory per-repo (`ActivityRepoCache`), TTL 15 min, incremental update via `fetchMergeRequestsUpdatedSince`
+- **Metryki wydajności** (`MetricsCalculator`, `ProductivityMetrics`):
+  - Velocity (PRs/tydzień, trend), Cycle Time (avg/median/p90), Development Impact, Code Churn, Review Engagement
+- **Frontend**: `/activity` route, `ActivityDashboardPage`, heatmapa SVG, drill-down, `ProductivityMetricsCards`, `VelocityChart`, przycisk "Odśwież dane"
+- **GitHub adapter**: `GitHubReviewAdapter` — reviews, `GitHubAdapter.fetchMergeRequestsUpdatedSince` — incremental fetch (`sort=updated`)
+
+### Incremental cache flow
+1. **Cold start**: full fetch (all PRs + details + reviews for ALL authors) → cache
+2. **Cache hit**: return from cache (0 API calls), filter per-author locally
+3. **TTL expired**: `fetchMergeRequestsUpdatedSince(lastUpdated)` → re-fetch only changed PRs → merge into cache
+4. **Manual refresh**: `POST /refresh` → incremental update (bez czekania na TTL)
+5. **Manual invalidate**: `DELETE /cache` → full refetch next time
+
+### Provider abstraction for incremental fetch
+- Port: `MergeRequestProvider.fetchMergeRequestsUpdatedSince(projectSlug, updatedAfter)`
+- GitHub adapter: `sort=updated&direction=desc`, stop when `updatedAt < since`
+- GitLab (future): `order_by=updated_at&updated_after=<ISO>`
+- `MergeRequest.updatedAt` field (nullable, backward-compatible)
 
 ## Lessons Learned (code review 015)
 
@@ -142,6 +162,7 @@ Moduł activity fetchuje N detail + N reviews = 2N calls. Mitigation:
 - Unit testy z mockami nie wyłapią problemów integracyjnych (np. GitHub API nie zwraca pól na liście) — rozważyć contract testy
 
 ## Recent Changes
+- 020-activity-cache-velocity: Incremental cache per-repo (TTL 15 min), 5 productivity metrics (velocity, cycle time, impact, churn, review engagement), `MergeRequest.updatedAt`, `fetchMergeRequestsUpdatedSince` on port, frontend metrics cards + refresh button
 - 015-user-activity-health: Activity dashboard, 6 detection rules, heatmap, BDD + unit tests
 - 012-performance-profiling: `/profile` command, DiagnosticsController, Actuator+Micrometer, async-profiler integration, `scripts/profile.sh`
 - 007-llm-analysis-details: Detailed LLM analysis (categories, oversight, summary), dedicated AnalysisDetailPage, frontend tests (Vitest), Polish translation, MR metadata persistence fix, Claude CLI stdin fix

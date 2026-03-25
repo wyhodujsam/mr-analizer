@@ -17,6 +17,9 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -91,6 +94,66 @@ public class GitHubClient {
             url = parseNextLink(response.getHeaders());
         }
 
+        return allPrs;
+    }
+
+    private static final int MAX_INCREMENTAL_PAGES = 10;
+
+    public List<GitHubPullRequest> fetchPullRequestsUpdatedSince(
+            String owner, String repo, LocalDateTime since) {
+        requireToken();
+        String sinceStr = since.atZone(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT);
+
+        List<GitHubPullRequest> allPrs = new ArrayList<>();
+        int pages = 0;
+        String url = UriComponentsBuilder.fromPath("/repos/{owner}/{repo}/pulls")
+                .queryParam("state", "all")
+                .queryParam("sort", "updated")
+                .queryParam("direction", "desc")
+                .queryParam("per_page", 100)
+                .queryParam("page", 1)
+                .buildAndExpand(owner, repo)
+                .toUriString();
+
+        while (url != null) {
+            final String currentUrl = url;
+            var response = executeWithErrorHandling(() -> webClient.get()
+                    .uri(currentUrl)
+                    .retrieve()
+                    .toEntityList(GitHubPullRequest.class)
+                    .block());
+
+            if (response == null) break;
+
+            checkRateLimit(response.getHeaders());
+
+            List<GitHubPullRequest> body = response.getBody();
+            if (body == null || body.isEmpty()) break;
+
+            boolean reachedOlder = false;
+            for (GitHubPullRequest pr : body) {
+                if (pr.getUpdatedAt() != null && pr.getUpdatedAt()
+                        .toInstant().isBefore(since.toInstant(ZoneOffset.UTC))) {
+                    reachedOlder = true;
+                    break;
+                }
+                allPrs.add(pr);
+            }
+
+            if (reachedOlder) break;
+
+            pages++;
+            if (pages >= MAX_INCREMENTAL_PAGES) {
+                log.warn("Incremental fetch for {}/{} hit page limit ({}), stopping",
+                        owner, repo, MAX_INCREMENTAL_PAGES);
+                break;
+            }
+
+            url = parseNextLink(response.getHeaders());
+        }
+
+        log.info("Incremental fetch for {}/{}: {} PRs updated since {}",
+                owner, repo, allPrs.size(), sinceStr);
         return allPrs;
     }
 

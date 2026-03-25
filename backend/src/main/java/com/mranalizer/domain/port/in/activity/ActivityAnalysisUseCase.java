@@ -10,4 +10,8 @@ public interface ActivityAnalysisUseCase {
     List<ContributorInfo> getContributors(String projectSlug);
 
     ActivityReport analyzeActivity(String projectSlug, String author);
+
+    void invalidateCache(String projectSlug);
+
+    void refreshCache(String projectSlug);
 }

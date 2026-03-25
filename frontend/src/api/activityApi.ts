@@ -14,3 +14,11 @@ export async function getActivityReport(owner: string, repo: string, author: str
   });
   return data;
 }
+
+export async function refreshActivityCache(owner: string, repo: string): Promise<void> {
+  await api.post(`/api/activity/${owner}/${repo}/refresh`);
+}
+
+export async function invalidateActivityCache(owner: string, repo: string): Promise<void> {
+  await api.delete(`/api/activity/${owner}/${repo}/cache`);
+}

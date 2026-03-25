@@ -2,8 +2,10 @@ package com.mranalizer.integration;
 
 import com.mranalizer.adapter.in.rest.activity.dto.ActivityReportResponse;
 import com.mranalizer.adapter.in.rest.activity.dto.ContributorResponse;
+import com.mranalizer.domain.port.in.activity.ActivityAnalysisUseCase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 
@@ -14,8 +16,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class ActivityIntegrationTest extends GitHubIntegrationTestBase {
 
+    @Autowired
+    private ActivityAnalysisUseCase activityAnalysis;
+
     @BeforeEach
     void setupRoutes() {
+        activityAnalysis.invalidateCache("test/repo");
         // Map.of has 10-entry limit, use Map.ofEntries for more
         setupDispatcher(Map.ofEntries(
                 Map.entry("/repos/test/repo/pulls\\?.*", "pr-list-3.json"),
