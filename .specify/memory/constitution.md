@@ -33,6 +33,36 @@ BDD (Behavior-Driven Development) is a test-first, agile testing practice. Scena
 - `.feature` files serve as living documentation of system behavior.
 - Unit tests (JUnit 5 + Mockito) for domain logic remain mandatory alongside BDD tests.
 
+### III-b. Test Pyramid (MUST)
+
+Projekt utrzymuje piramidę testów opisaną w `TEST_PYRAMID.md`. Każda nowa funkcjonalność MUSI zachować proporcje piramidy:
+
+```
+         E2E (Playwright)         — najmniej, najwolniejsze, najdroższe
+        Integration (Spring+MockWebServer) — umiarkowanie
+       BDD (Cucumber/Gherkin)     — scenariusze biznesowe
+      Unit (JUnit, Vitest)        — najwięcej, najszybsze
+```
+
+**Wymagania przy specyfikacji nowej funkcjonalności (spec.md / plan.md / tasks.md):**
+
+1. **Unit tests** — KAŻDY nowy domain service, rule, calculator, detector MUSI mieć unit testy. Pokrycie edge cases (empty input, null, division by zero).
+2. **BDD scenarios** — KAŻDA user story ze spec.md MUSI mieć odpowiadające scenariusze `.feature` PRZED implementacją.
+3. **Integration tests** — KAŻDY nowy REST endpoint MUSI mieć integration test z MockWebServer (full round-trip: HTTP → controller → service → mock provider → response JSON).
+4. **E2E tests** — KAŻDA nowa strona/widok MUSI mieć co najmniej 1 E2E test Playwright (nawigacja + podstawowy flow).
+5. **Frontend unit tests** — KAŻDY nowy React komponent MUSI mieć Vitest test (renderowanie z mock data, interakcje).
+6. **Persistence round-trip** — KAŻDA nowa encja JPA MUSI mieć test serializacji/deserializacji (szczególnie JSON fields, enum mapping).
+7. **Concurrency** — jeśli feature używa parallel execution, cache, lub shared state → MUSI mieć test na thread safety.
+
+**Checklist do tasks.md:**
+- [ ] Unit testy domain logic
+- [ ] BDD .feature file (test-first)
+- [ ] Integration test REST endpoints
+- [ ] Frontend component test (Vitest)
+- [ ] E2E test (Playwright) — jeśli nowa strona/flow
+- [ ] JPA round-trip test — jeśli nowa encja
+- [ ] Concurrency test — jeśli shared state
+
 ### IV. SDD Workflow (MUST)
 
 All features MUST follow the Spec Kit workflow:
@@ -67,4 +97,4 @@ All features MUST follow the Spec Kit workflow:
 - All spec reviews must verify compliance with hexagonal architecture and BDD principles.
 - Complexity beyond constitution principles must be justified in plan.md Complexity Tracking table.
 
-**Version**: 1.0.0 | **Ratified**: 2026-03-20 | **Last Amended**: 2026-03-20
+**Version**: 1.1.0 | **Ratified**: 2026-03-20 | **Last Amended**: 2026-03-25
