@@ -4,6 +4,7 @@ import DashboardPage from './pages/DashboardPage';
 import MrDetailPage from './pages/MrDetailPage';
 import AnalysisDetailPage from './pages/AnalysisDetailPage';
 import ActivityDashboardPage from './pages/ActivityDashboardPage';
+import ProjectAnalysisPage from './pages/ProjectAnalysisPage';
 import { Alert } from 'react-bootstrap';
 
 export default function App() {
@@ -16,6 +17,8 @@ export default function App() {
           <Route path="analysis/:reportId/:resultId" element={<AnalysisDetailPage />} />
           <Route path="activity" element={<ActivityDashboardPage />} />
           <Route path="activity/:owner/:repo" element={<ActivityDashboardPage />} />
+          <Route path="project" element={<ProjectAnalysisPage />} />
+          <Route path="project/:owner/:repo" element={<ProjectAnalysisPage />} />
           <Route path="*" element={<Alert variant="warning">Strona nie znaleziona (404)</Alert>} />
         </Route>
       </Routes>

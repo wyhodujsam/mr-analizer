@@ -131,7 +131,7 @@ public class ActivityAnalysisService implements ActivityAnalysisUseCase {
 
     // --- Cache logic (C1 fix: computeIfAbsent for cold start, synchronized for incremental) ---
 
-    ActivityRepoCache getOrFetchCache(String projectSlug) {
+    public ActivityRepoCache getOrFetchCache(String projectSlug) {
         ActivityRepoCache cached = repoCache.computeIfAbsent(projectSlug, slug -> {
             log.info("Activity cache MISS for {} — full fetch", slug);
             return fullFetch(slug);

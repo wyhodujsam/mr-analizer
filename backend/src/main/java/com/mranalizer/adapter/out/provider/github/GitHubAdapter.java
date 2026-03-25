@@ -3,6 +3,7 @@ package com.mranalizer.adapter.out.provider.github;
 import com.mranalizer.adapter.out.provider.github.dto.GitHubFile;
 import com.mranalizer.adapter.out.provider.github.dto.GitHubPullRequest;
 import com.mranalizer.domain.exception.InvalidRequestException;
+import com.mranalizer.domain.model.ChangedFile;
 import com.mranalizer.domain.model.FetchCriteria;
 import com.mranalizer.domain.model.MergeRequest;
 import com.mranalizer.domain.port.out.MergeRequestProvider;
@@ -69,6 +70,21 @@ public class GitHubAdapter implements MergeRequestProvider {
         GitHubPullRequest pr = client.fetchPullRequest(owner, repo, number);
         List<GitHubFile> files = client.fetchFiles(owner, repo, number);
         return mapper.toDomain(pr, files, projectSlug);
+    }
+
+    @Override
+    public List<ChangedFile> fetchFiles(String projectSlug, String mrId) {
+        String[] parts = parseOwnerRepo(projectSlug);
+        int number;
+        try {
+            number = Integer.parseInt(mrId);
+        } catch (NumberFormatException e) {
+            throw new InvalidRequestException("Invalid MR ID (not a number): " + mrId);
+        }
+        List<GitHubFile> files = client.fetchFiles(parts[0], parts[1], number);
+        return files.stream()
+                .map(f -> new ChangedFile(f.getFilename(), f.getAdditions(), f.getDeletions(), f.getStatus()))
+                .toList();
     }
 
     @Override
