@@ -69,6 +69,22 @@ bash scripts/profile.sh --help        # manual script usage
 - TypeScript: Strict mode. Functional components with hooks.
 - UI text: Polish language throughout frontend and LLM prompt.
 
+## Static Analysis
+
+```bash
+# Backend: SpotBugs + PMD (runs on mvn verify)
+cd backend && mvn verify -DskipTests
+
+# Frontend: ESLint (TypeScript)
+cd frontend && npm run lint
+cd frontend && npm run lint:fix  # auto-fix
+```
+
+- **SpotBugs**: bug patterns (null deref, resource leaks, concurrency). Config: `spotbugs-exclude.xml`
+- **PMD**: code quality (unused vars, empty catch, dead code). Config: `pmd-rules.xml`
+- **ESLint**: TypeScript strict rules (no-explicit-any, eqeqeq, prefer-const). Config: `eslint.config.js`
+- All run in `mvn verify` / `npm run lint` — must pass before merge
+
 ## Domain Models (key)
 
 - `LlmAssessment` — extended with: `overallAutomatability`, `categories`, `humanOversightRequired`, `whyLlmFriendly`, `summaryTable`. Backward-compatible 3-arg constructor.
