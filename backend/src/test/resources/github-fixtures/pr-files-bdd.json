@@ -1,0 +1,5 @@
+[
+  {"filename": "src/main/java/auth/AuthService.java", "additions": 100, "deletions": 20, "status": "modified"},
+  {"filename": "src/test/resources/features/auth.feature", "additions": 50, "deletions": 0, "status": "added"},
+  {"filename": "src/test/java/bdd/AuthSteps.java", "additions": 80, "deletions": 0, "status": "added"}
+]
