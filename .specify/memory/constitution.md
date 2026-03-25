@@ -90,6 +90,35 @@ All features MUST follow the Spec Kit workflow:
 - **Ports**: 8083 (backend), 3000 (frontend dev)
 - **Packaging**: JAR (backend, embedded Tomcat) — produkcja: frontend build serwowany przez backend
 
+### VI. Static Analysis & PR Gate (MUST)
+
+Analiza statyczna MUSI przejść przed utworzeniem PR. Jest to ostatni krok przed `git push` + `gh pr create`.
+
+**Backend — SpotBugs + PMD:**
+```bash
+cd backend && mvn verify -DskipTests
+```
+- SpotBugs: bug patterns. Config: `spotbugs-exclude.xml`
+- PMD: code quality. Config: `pmd-rules.xml`
+- MUSI zakończyć się `BUILD SUCCESS` z 0 bugs i 0 violations
+
+**Frontend — ESLint:**
+```bash
+cd frontend && npm run lint
+```
+- ESLint + typescript-eslint. Config: `eslint.config.js`
+- MUSI zakończyć się z 0 errors (warnings akceptowalne)
+
+**Checklist przed PR (kolejność):**
+1. `cd backend && mvn test` → all green
+2. `cd backend && mvn verify -DskipTests` → SpotBugs 0 bugs + PMD 0 violations
+3. `cd frontend && npx vitest run` → all green
+4. `cd frontend && npm run lint` → 0 errors
+5. `cd frontend && npx playwright test` → E2E green (jeśli nowa strona)
+6. `git push` + `gh pr create`
+
+Jeśli analiza statyczna znajdzie problem — naprawić PRZED PR. Suppressowanie wymaga uzasadnienia z komentarzem.
+
 ## Governance
 
 - Constitution supersedes all other practices.
@@ -97,4 +126,4 @@ All features MUST follow the Spec Kit workflow:
 - All spec reviews must verify compliance with hexagonal architecture and BDD principles.
 - Complexity beyond constitution principles must be justified in plan.md Complexity Tracking table.
 
-**Version**: 1.1.0 | **Ratified**: 2026-03-20 | **Last Amended**: 2026-03-25
+**Version**: 1.2.0 | **Ratified**: 2026-03-20 | **Last Amended**: 2026-03-25
