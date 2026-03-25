@@ -3,6 +3,7 @@ package com.mranalizer.domain.port.out;
 import com.mranalizer.domain.model.FetchCriteria;
 import com.mranalizer.domain.model.MergeRequest;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -27,6 +28,13 @@ public interface MergeRequestProvider {
      * @return the merge request
      */
     MergeRequest fetchMergeRequest(String projectSlug, String mrId);
+
+    /**
+     * Fetches merge requests updated after the given timestamp.
+     * Provider-agnostic: GitHub uses "since" param, GitLab uses "updated_after".
+     * Returns PRs sorted by updatedAt desc, state=all, no limit (paginate all).
+     */
+    List<MergeRequest> fetchMergeRequestsUpdatedSince(String projectSlug, LocalDateTime updatedAfter);
 
     /** Returns the canonical name of this VCS provider (e.g. "gitlab", "github"). */
     String getProviderName();

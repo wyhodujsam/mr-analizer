@@ -13,6 +13,51 @@ export interface ActivityFlag {
   prReference: string | null;
 }
 
+export interface WeeklyCount {
+  weekStart: string;
+  count: number;
+}
+
+export interface VelocityMetrics {
+  prsPerWeek: number;
+  weeklyBreakdown: WeeklyCount[];
+  trend: 'rising' | 'falling' | 'stable';
+}
+
+export interface CycleTimeMetrics {
+  avgHours: number;
+  medianHours: number;
+  p90Hours: number;
+}
+
+export interface ImpactMetrics {
+  totalAdditions: number;
+  totalDeletions: number;
+  totalLines: number;
+  avgLinesPerPr: number;
+  addDeleteRatio: number;
+}
+
+export interface CodeChurnMetrics {
+  churnRatio: number;
+  label: string;
+}
+
+export interface ReviewEngagementMetrics {
+  reviewsGiven: number;
+  reviewsReceived: number;
+  ratio: number;
+  label: string;
+}
+
+export interface ProductivityMetrics {
+  velocity: VelocityMetrics;
+  cycleTime: CycleTimeMetrics;
+  impact: ImpactMetrics;
+  codeChurn: CodeChurnMetrics;
+  reviewEngagement: ReviewEngagementMetrics | null;
+}
+
 export interface ContributorStats {
   totalPrs: number;
   avgSize: number;
@@ -46,6 +91,7 @@ export interface ActivityReport {
   contributor: string;
   projectSlug: string;
   stats: ContributorStats;
+  productivity: ProductivityMetrics | null;
   flags: ActivityFlag[];
   dailyActivity: Record<string, DailyActivity>;
   pullRequests: PullRequestItem[];

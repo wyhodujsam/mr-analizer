@@ -261,7 +261,9 @@ DELETE /api/repos/{id}               # usun repo z listy
 
 # Activity (odseparowany modul)
 GET    /api/activity/{owner}/{repo}/contributors      # lista kontrybutorów repo
-GET    /api/activity/{owner}/{repo}/report?author=     # raport aktywnosci (flagi, stats, heatmapa)
+GET    /api/activity/{owner}/{repo}/report?author=     # raport aktywnosci (flagi, stats, metryki wydajnosci)
+POST   /api/activity/{owner}/{repo}/refresh           # incremental cache update
+DELETE /api/activity/{owner}/{repo}/cache              # full cache invalidation
 ```
 
 ## GUI — flow uzytkownika
@@ -311,10 +313,10 @@ Konfiguracja regul w `application.yml` (exclude labels, min/max files, file exte
 
 ## Testy
 
-- **413 testow, 0 failures** (293 backend + 120 frontend)
-- 53 scenariusze BDD (Cucumber/Gherkin) w 8 plikach .feature
-- 240 testow jednostkowych i integracyjnych (JUnit 5 + Mockito)
-- 120 testow frontend (Vitest + React Testing Library)
+- **472 testow, 0 failures** (340 backend + 132 frontend)
+- 64 scenariusze BDD (Cucumber/Gherkin) w 10 plikach .feature
+- 276 testow jednostkowych i integracyjnych (JUnit 5 + Mockito)
+- 132 testow frontend (Vitest + React Testing Library)
 - Testy integracyjne: Spring Boot + H2 + MockBean provider
 
 ## Zrealizowane features
@@ -388,6 +390,34 @@ Odseparowany modul analizy aktywnosci kontrybutora — wykrywanie nieprawidlowos
 - Route: `/activity` i `/activity/:owner/:repo`
 
 **Testy:** 36 unit testow regul + 7 BDD scenariuszy + 8 testow frontend (Vitest)
+
+### 020-activity-cache-velocity (DONE)
+
+Incremental cache per-repo + metryki wydajnosci kontrybutora:
+
+**Cache:**
+- In-memory cache (`ActivityRepoCache`) per-repo z TTL 15 min
+- Cold start: full fetch (all PRs + details + reviews for ALL authors)
+- Incremental update: `fetchMergeRequestsUpdatedSince` — tylko zmienione PRs
+- Switching between contributors = 0 API calls (filter locally from cache)
+- REST: `POST /refresh` (incremental), `DELETE /cache` (full invalidation)
+
+**Metryki wydajnosci** (`MetricsCalculator`, `ProductivityMetrics`):
+- Velocity: PRs/tydzien (4-week window), weekly breakdown, trend (rising/falling/stable)
+- Cycle Time: avg/median/p90 godzin od created do merged
+- Development Impact: total additions/deletions, avg per PR, add/delete ratio
+- Code Churn: deletions/additions ratio, label (nowy kod / zbalansowany / refactoring)
+- Review Engagement: reviews given/received, ratio, label
+
+**Provider abstraction:**
+- `MergeRequest.updatedAt` — nowe pole (nullable, backward-compatible)
+- `MergeRequestProvider.fetchMergeRequestsUpdatedSince()` — nowa metoda na porcie
+- GitHub: `sort=updated&direction=desc`, stop when updatedAt < since
+- GitLab (ready): `order_by=updated_at&updated_after=<ISO>` — identyczna semantyka, inne nazwy
+
+**Frontend:** `ProductivityMetricsCards` (velocity, cycle time, impact, churn, review engagement), `VelocityChart` (SVG sparkline), przycisk "Odswież dane"
+
+**Testy:** 19 unit MetricsCalculator + 8 unit ActivityAnalysisService (cache) + 11 BDD scenariuszy (cache + metryki) + 10 frontend (Vitest)
 
 ## Uwagi
 

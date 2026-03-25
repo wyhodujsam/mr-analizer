@@ -46,6 +46,8 @@ public class ActivityAnalysisSteps {
         activityReport = null;
         contributors = null;
         currentProjectSlug = null;
+        // Invalidate cache to ensure test isolation
+        activityAnalysis.invalidateCache("owner/repo");
     }
 
     @Given("repozytorium {string} z wieloma kontrybutorami")
@@ -278,6 +280,7 @@ public class ActivityAnalysisSteps {
                 .diffStats(new DiffStats(additions, deletions, 3))
                 .createdAt(createdAt)
                 .mergedAt(mergedAt)
+                .updatedAt(mergedAt != null ? mergedAt : createdAt)
                 .build();
     }
 }

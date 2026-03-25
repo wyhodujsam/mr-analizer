@@ -3,6 +3,7 @@ package com.mranalizer.adapter.config;
 import com.mranalizer.domain.port.out.MergeRequestProvider;
 import com.mranalizer.domain.port.out.activity.ReviewProvider;
 import com.mranalizer.domain.service.activity.ActivityAnalysisService;
+import com.mranalizer.domain.service.activity.MetricsCalculator;
 import com.mranalizer.domain.service.activity.rules.*;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,11 +31,18 @@ public class ActivityConfig {
     }
 
     @Bean
+    public MetricsCalculator metricsCalculator() {
+        return new MetricsCalculator();
+    }
+
+    @Bean
     public ActivityAnalysisService activityAnalysisService(
             MergeRequestProvider mergeRequestProvider,
             ReviewProvider reviewProvider,
             List<ActivityRule> activityRules,
-            AggregateRules aggregateRules) {
-        return new ActivityAnalysisService(mergeRequestProvider, reviewProvider, activityRules, aggregateRules);
+            AggregateRules aggregateRules,
+            MetricsCalculator metricsCalculator) {
+        return new ActivityAnalysisService(
+                mergeRequestProvider, reviewProvider, activityRules, aggregateRules, metricsCalculator);
     }
 }

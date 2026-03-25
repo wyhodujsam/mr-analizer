@@ -36,6 +36,9 @@ public class GitHubPullRequest {
     @JsonProperty("created_at")
     private ZonedDateTime createdAt;
 
+    @JsonProperty("updated_at")
+    private ZonedDateTime updatedAt;
+
     @JsonProperty("labels")
     private List<Label> labels;
 
@@ -77,6 +80,9 @@ public class GitHubPullRequest {
 
     public ZonedDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(ZonedDateTime createdAt) { this.createdAt = createdAt; }
+
+    public ZonedDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(ZonedDateTime updatedAt) { this.updatedAt = updatedAt; }
 
     public List<Label> getLabels() { return labels; }
     public void setLabels(List<Label> labels) { this.labels = labels; }

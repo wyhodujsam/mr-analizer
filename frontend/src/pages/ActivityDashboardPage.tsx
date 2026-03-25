@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { Alert, Spinner } from 'react-bootstrap';
+import { Alert, Button, Nav, Spinner, Tab } from 'react-bootstrap';
 import RepoSelector from '../components/RepoSelector';
 import ContributorSelector from '../components/activity/ContributorSelector';
 import StatsCards from '../components/activity/StatsCards';
+import ProductivityMetricsCards from '../components/activity/ProductivityMetricsCards';
 import FlagsList from '../components/activity/FlagsList';
 import ActivityHeatmap from '../components/activity/ActivityHeatmap';
 import DayDrillDown from '../components/activity/DayDrillDown';
@@ -11,7 +12,7 @@ import ActivityBarChart from '../components/activity/ActivityBarChart';
 import type { SavedRepository } from '../types';
 import type { ContributorInfo, ActivityReport, DailyActivity, Severity } from '../types/activity';
 import { getRepos, addRepo, deleteRepo } from '../api/analysisApi';
-import { getContributors, getActivityReport } from '../api/activityApi';
+import { getContributors, getActivityReport, refreshActivityCache } from '../api/activityApi';
 
 export default function ActivityDashboardPage() {
   const { owner, repo } = useParams<{ owner: string; repo: string }>();
@@ -23,10 +24,12 @@ export default function ActivityDashboardPage() {
   const [report, setReport] = useState<ActivityReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingContributors, setLoadingContributors] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [selectedDay, setSelectedDay] = useState<{ date: string; activity: DailyActivity } | null>(null);
   const [severityFilter, setSeverityFilter] = useState<Severity | null>(null);
   const [typeFilter, setTypeFilter] = useState('all');
+  const [activeTab, setActiveTab] = useState('wydajnosc');
 
   const loadRepos = useCallback(async () => {
     try {
@@ -91,14 +94,13 @@ export default function ActivityDashboardPage() {
     setReport(null);
     setSelectedDay(null);
 
-    // Save repo if not already saved
     const exists = savedRepos.some(r => r.projectSlug === selectedSlug);
     if (!exists && selectedSlug.includes('/')) {
       try {
         await addRepo(selectedSlug, selectedProvider);
         await loadRepos();
       } catch {
-        // ignore — repo selection still works
+        // ignore
       }
     }
   }
@@ -118,9 +120,44 @@ export default function ActivityDashboardPage() {
     }
   }
 
+  async function handleRefresh() {
+    if (!slug) return;
+    setRefreshing(true);
+    try {
+      const [ownerPart, repoPart] = slug.split('/');
+      await refreshActivityCache(ownerPart, repoPart);
+      if (selectedAuthor) {
+        await loadReport(slug, selectedAuthor);
+      }
+      await loadContributors(slug);
+    } catch (e: any) {
+      setError(e.response?.data?.message ?? 'Nie udało się odświeżyć danych');
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  const flagCount = report?.flags.length ?? 0;
+
   return (
     <>
-      <h2 className="mb-4">Aktywność kontrybutora</h2>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2 className="mb-0">Aktywność kontrybutora</h2>
+        {slug && (
+          <Button
+            variant="outline-secondary"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={refreshing}
+          >
+            {refreshing ? (
+              <><Spinner size="sm" animation="border" className="me-1" /> Odświeżanie...</>
+            ) : (
+              <>&#8635; Odśwież dane</>
+            )}
+          </Button>
+        )}
+      </div>
 
       <RepoSelector
         savedRepos={savedRepos}
@@ -169,31 +206,59 @@ export default function ActivityDashboardPage() {
             onSeverityClick={setSeverityFilter}
           />
 
-          <h4 className="mt-4 mb-3">Heatmapa aktywności</h4>
-          <ActivityHeatmap
-            dailyActivity={report.dailyActivity}
-            onDayClick={(date, activity) => {
-              if (date && activity) {
-                setSelectedDay({ date, activity });
-              } else {
-                setSelectedDay(null);
-              }
-            }}
-          />
-          {selectedDay && (
-            <DayDrillDown date={selectedDay.date} activity={selectedDay.activity} />
-          )}
+          <Tab.Container activeKey={activeTab} onSelect={(k) => setActiveTab(k ?? 'wydajnosc')}>
+            <Nav variant="tabs" className="mt-4">
+              <Nav.Item>
+                <Nav.Link eventKey="wydajnosc">Wydajność</Nav.Link>
+              </Nav.Item>
+              <Nav.Item>
+                <Nav.Link eventKey="aktywnosc">Aktywność</Nav.Link>
+              </Nav.Item>
+              <Nav.Item>
+                <Nav.Link eventKey="naruszenia">
+                  Naruszenia
+                  {flagCount > 0 && (
+                    <span className="badge bg-danger ms-2">{flagCount}</span>
+                  )}
+                </Nav.Link>
+              </Nav.Item>
+            </Nav>
 
-          <h4 className="mt-4 mb-3">Aktywność w czasie</h4>
-          <ActivityBarChart dailyActivity={report.dailyActivity} />
+            <Tab.Content className="pt-3">
+              <Tab.Pane eventKey="wydajnosc">
+                <ProductivityMetricsCards productivity={report.productivity} />
+              </Tab.Pane>
 
-          <h4 className="mt-4 mb-3">Wykryte nieprawidłowości</h4>
-          <FlagsList
-            flags={report.flags}
-            severityFilter={severityFilter}
-            typeFilter={typeFilter}
-            onTypeFilterChange={setTypeFilter}
-          />
+              <Tab.Pane eventKey="aktywnosc">
+                <h5 className="mb-3">Heatmapa aktywności</h5>
+                <ActivityHeatmap
+                  dailyActivity={report.dailyActivity}
+                  onDayClick={(date, activity) => {
+                    if (date && activity) {
+                      setSelectedDay({ date, activity });
+                    } else {
+                      setSelectedDay(null);
+                    }
+                  }}
+                />
+                {selectedDay && (
+                  <DayDrillDown date={selectedDay.date} activity={selectedDay.activity} />
+                )}
+
+                <h5 className="mt-4 mb-3">Aktywność w czasie</h5>
+                <ActivityBarChart dailyActivity={report.dailyActivity} />
+              </Tab.Pane>
+
+              <Tab.Pane eventKey="naruszenia">
+                <FlagsList
+                  flags={report.flags}
+                  severityFilter={severityFilter}
+                  typeFilter={typeFilter}
+                  onTypeFilterChange={setTypeFilter}
+                />
+              </Tab.Pane>
+            </Tab.Content>
+          </Tab.Container>
         </>
       )}
     </>

@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -38,7 +39,9 @@ class ActivityAnalysisServiceTest {
                 new NoReviewRule(),
                 new SelfMergeRule()
         );
-        service = new ActivityAnalysisService(mrProvider, reviewProvider, rules, new AggregateRules());
+        service = new ActivityAnalysisService(
+                mrProvider, reviewProvider, rules, new AggregateRules(),
+                new MetricsCalculator(), Duration.ofHours(1)); // long TTL so cache doesn't expire mid-test
     }
 
     private void setupFetchDetail(List<MergeRequest> prs) {
@@ -121,6 +124,7 @@ class ActivityAnalysisServiceTest {
         assertEquals(225.0, report.getStats().avgSize()); // (300 + 150) / 2
         assertEquals(60.0, report.getStats().avgReviewTimeMinutes());
         assertEquals(0.0, report.getStats().weekendPercentage());
+        assertNotNull(report.getStats().productivity());
     }
 
     @Test
@@ -131,6 +135,7 @@ class ActivityAnalysisServiceTest {
                 buildMr("3", "anna", 100, 0, LocalDateTime.now(), null, "open")
         );
         when(mrProvider.fetchMergeRequests(any())).thenReturn(prs);
+        setupFetchDetail(prs);
 
         List<ContributorInfo> contributors = service.getContributors("owner/repo");
 
@@ -161,6 +166,46 @@ class ActivityAnalysisServiceTest {
         assertTrue(first.ordinal() <= last.ordinal());
     }
 
+    @Test
+    void shouldUseCacheForSecondAuthor() {
+        List<MergeRequest> prs = List.of(
+                buildMr("1", "jan", 100, 0, LocalDateTime.now(), null, "open"),
+                buildMr("2", "anna", 100, 0, LocalDateTime.now(), null, "open")
+        );
+        when(mrProvider.fetchMergeRequests(any())).thenReturn(prs);
+        setupFetchDetail(prs);
+        when(reviewProvider.fetchReviews(any(), anyString())).thenReturn(List.of());
+
+        // First call — cache populated
+        service.analyzeActivity("owner/repo", "jan");
+
+        // Reset mock to verify no more calls
+        Mockito.reset(mrProvider);
+
+        // Second call — should use cache
+        ActivityReport report = service.analyzeActivity("owner/repo", "anna");
+
+        assertEquals(1, report.getStats().totalPrs());
+        Mockito.verifyNoInteractions(mrProvider);
+    }
+
+    @Test
+    void shouldInvalidateCache() {
+        List<MergeRequest> prs = List.of(
+                buildMr("1", "jan", 100, 0, LocalDateTime.now(), null, "open")
+        );
+        when(mrProvider.fetchMergeRequests(any())).thenReturn(prs);
+        setupFetchDetail(prs);
+
+        service.analyzeActivity("owner/repo", "jan");
+
+        service.invalidateCache("owner/repo");
+
+        // After invalidation, next call should fetch again
+        service.analyzeActivity("owner/repo", "jan");
+        Mockito.verify(mrProvider, Mockito.times(2)).fetchMergeRequests(any());
+    }
+
     private MergeRequest buildMr(String id, String author, int additions, int deletions,
                                   LocalDateTime createdAt, LocalDateTime mergedAt, String state) {
         return MergeRequest.builder()
@@ -171,6 +216,7 @@ class ActivityAnalysisServiceTest {
                 .diffStats(new DiffStats(additions, deletions, 3))
                 .createdAt(createdAt)
                 .mergedAt(mergedAt)
+                .updatedAt(createdAt)
                 .build();
     }
 }

@@ -12,6 +12,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -68,6 +69,18 @@ public class GitHubAdapter implements MergeRequestProvider {
         GitHubPullRequest pr = client.fetchPullRequest(owner, repo, number);
         List<GitHubFile> files = client.fetchFiles(owner, repo, number);
         return mapper.toDomain(pr, files, projectSlug);
+    }
+
+    @Override
+    public List<MergeRequest> fetchMergeRequestsUpdatedSince(String projectSlug, LocalDateTime updatedAfter) {
+        String[] parts = parseOwnerRepo(projectSlug);
+        String owner = parts[0];
+        String repo = parts[1];
+
+        List<GitHubPullRequest> dtos = client.fetchPullRequestsUpdatedSince(owner, repo, updatedAfter);
+        return dtos.stream()
+                .map(pr -> mapper.toDomainWithoutFiles(pr, projectSlug))
+                .collect(Collectors.toList());
     }
 
     @Override

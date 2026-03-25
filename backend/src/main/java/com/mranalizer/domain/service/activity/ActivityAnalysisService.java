@@ -15,41 +15,57 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 public class ActivityAnalysisService implements ActivityAnalysisUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(ActivityAnalysisService.class);
+    private static final Duration DEFAULT_CACHE_TTL = Duration.ofMinutes(15);
+    private static final int MAX_INCREMENTAL_PRS = 500;
 
     private final MergeRequestProvider mergeRequestProvider;
     private final ReviewProvider reviewProvider;
     private final List<ActivityRule> rules;
     private final AggregateRules aggregateRules;
+    private final MetricsCalculator metricsCalculator;
+    private final Duration cacheTtl;
+    private final ExecutorService fetchExecutor = Executors.newFixedThreadPool(8);
+
+    private final ConcurrentHashMap<String, ActivityRepoCache> repoCache = new ConcurrentHashMap<>();
 
     public ActivityAnalysisService(MergeRequestProvider mergeRequestProvider,
                                    ReviewProvider reviewProvider,
                                    List<ActivityRule> rules,
-                                   AggregateRules aggregateRules) {
+                                   AggregateRules aggregateRules,
+                                   MetricsCalculator metricsCalculator) {
+        this(mergeRequestProvider, reviewProvider, rules, aggregateRules, metricsCalculator, DEFAULT_CACHE_TTL);
+    }
+
+    public ActivityAnalysisService(MergeRequestProvider mergeRequestProvider,
+                                   ReviewProvider reviewProvider,
+                                   List<ActivityRule> rules,
+                                   AggregateRules aggregateRules,
+                                   MetricsCalculator metricsCalculator,
+                                   Duration cacheTtl) {
         this.mergeRequestProvider = mergeRequestProvider;
         this.reviewProvider = reviewProvider;
         this.rules = rules;
         this.aggregateRules = aggregateRules;
+        this.metricsCalculator = metricsCalculator;
+        this.cacheTtl = cacheTtl;
     }
 
     @Override
     public List<ContributorInfo> getContributors(String projectSlug) {
-        FetchCriteria criteria = FetchCriteria.builder()
-                .projectSlug(projectSlug)
-                .state("all")
-                .limit(200)
-                .build();
+        ActivityRepoCache cache = getOrFetchCache(projectSlug);
 
-        List<MergeRequest> allPrs = mergeRequestProvider.fetchMergeRequests(criteria);
-
-        return allPrs.stream()
+        return cache.getAllDetailedPrs().stream()
                 .filter(mr -> mr.getAuthor() != null)
                 .collect(Collectors.groupingBy(MergeRequest::getAuthor, Collectors.counting()))
                 .entrySet().stream()
@@ -60,24 +76,14 @@ public class ActivityAnalysisService implements ActivityAnalysisUseCase {
 
     @Override
     public ActivityReport analyzeActivity(String projectSlug, String author) {
-        FetchCriteria criteria = FetchCriteria.builder()
-                .projectSlug(projectSlug)
-                .state("all")
-                .limit(200)
-                .build();
+        ActivityRepoCache cache = getOrFetchCache(projectSlug);
+        List<MergeRequest> userPrs = cache.getPrsForAuthor(author);
 
-        List<MergeRequest> allPrs = mergeRequestProvider.fetchMergeRequests(criteria);
-        List<MergeRequest> userPrsBrowse = allPrs.stream()
-                .filter(mr -> author.equals(mr.getAuthor()))
-                .toList();
-
-        if (userPrsBrowse.isEmpty()) {
+        if (userPrs.isEmpty()) {
             return emptyReport(author, projectSlug);
         }
 
-        // Parallel fetch: PR details + reviews
-        List<MergeRequest> userPrs = fetchDetailsParallel(projectSlug, userPrsBrowse);
-        Map<String, List<ReviewInfo>> reviewsByPr = fetchReviewsParallel(projectSlug, userPrs);
+        Map<String, List<ReviewInfo>> reviewsByPr = cache.getReviewsByPr();
 
         // Evaluate per-PR rules
         List<ActivityFlag> allFlags = new ArrayList<>();
@@ -97,30 +103,116 @@ public class ActivityAnalysisService implements ActivityAnalysisUseCase {
 
         // Aggregate rules
         allFlags.addAll(aggregateRules.evaluate(userPrs));
-
-        // Sort flags: critical first
         allFlags.sort(Comparator.comparing(ActivityFlag::severity));
 
-        ContributorStats stats = buildStats(userPrs, allFlags);
+        // Productivity metrics
+        ProductivityMetrics productivity = metricsCalculator.calculateAll(
+                author, userPrs, cache.getAllDetailedPrs(), reviewsByPr);
+
+        ContributorStats stats = buildStats(userPrs, allFlags, productivity);
         Map<LocalDate, DailyActivity> dailyActivity = buildDailyActivity(userPrs, flagsByPr);
 
         return new ActivityReport(author, projectSlug, stats, allFlags, dailyActivity, userPrs);
     }
 
-    private List<MergeRequest> fetchDetailsParallel(String projectSlug, List<MergeRequest> browsePrs) {
-        List<CompletableFuture<MergeRequest>> futures = browsePrs.stream()
-                .map(mr -> CompletableFuture.supplyAsync(() -> fetchDetailSafe(projectSlug, mr)))
-                .toList();
-
-        return futures.stream()
-                .map(CompletableFuture::join)
-                .toList();
+    @Override
+    public void invalidateCache(String projectSlug) {
+        repoCache.remove(projectSlug);
+        log.info("Activity cache INVALIDATED for {}", projectSlug);
     }
 
-    private Map<String, List<ReviewInfo>> fetchReviewsParallel(String projectSlug, List<MergeRequest> prs) {
+    @Override
+    public void refreshCache(String projectSlug) {
+        ActivityRepoCache cached = repoCache.get(projectSlug);
+        if (cached != null) {
+            incrementalUpdate(projectSlug, cached);
+        }
+    }
+
+    // --- Cache logic (C1 fix: computeIfAbsent for cold start, synchronized for incremental) ---
+
+    ActivityRepoCache getOrFetchCache(String projectSlug) {
+        ActivityRepoCache cached = repoCache.computeIfAbsent(projectSlug, slug -> {
+            log.info("Activity cache MISS for {} — full fetch", slug);
+            return fullFetch(slug);
+        });
+
+        if (cached.needsRefresh()) {
+            synchronized (cached) {
+                // Double-check after acquiring lock
+                if (cached.needsRefresh()) {
+                    log.info("Activity cache STALE for {} — incremental update since {}",
+                            projectSlug, cached.getLastUpdated());
+                    incrementalUpdate(projectSlug, cached);
+                }
+            }
+        }
+
+        return cached;
+    }
+
+    private ActivityRepoCache fullFetch(String projectSlug) {
+        FetchCriteria criteria = FetchCriteria.builder()
+                .projectSlug(projectSlug)
+                .state("all")
+                .limit(200)
+                .build();
+
+        List<MergeRequest> browsePrs = mergeRequestProvider.fetchMergeRequests(criteria);
+        Map<String, MergeRequest> details = fetchAllDetailsParallel(projectSlug, browsePrs);
+        Map<String, List<ReviewInfo>> reviews = fetchAllReviewsParallel(projectSlug, details.values());
+
+        return new ActivityRepoCache(projectSlug, details, reviews, cacheTtl);
+    }
+
+    private void incrementalUpdate(String projectSlug, ActivityRepoCache cache) {
+        LocalDateTime since = cache.getLastUpdated();
+
+        List<MergeRequest> updatedBrowse =
+                mergeRequestProvider.fetchMergeRequestsUpdatedSince(projectSlug, since);
+
+        if (updatedBrowse.isEmpty()) {
+            cache.touchLastFetched();
+            log.info("Incremental update for {}: 0 changed PRs", projectSlug);
+            return;
+        }
+
+        // W7 fix: safety limit on incremental fetch
+        if (updatedBrowse.size() > MAX_INCREMENTAL_PRS) {
+            log.warn("Incremental update for {}: {} changed PRs exceeds limit {}, doing full fetch",
+                    projectSlug, updatedBrowse.size(), MAX_INCREMENTAL_PRS);
+            ActivityRepoCache fresh = fullFetch(projectSlug);
+            repoCache.put(projectSlug, fresh);
+            return;
+        }
+
+        log.info("Incremental update for {}: {} changed PRs", projectSlug, updatedBrowse.size());
+
+        Map<String, MergeRequest> updatedDetails = fetchAllDetailsParallel(projectSlug, updatedBrowse);
+        Map<String, List<ReviewInfo>> updatedReviews = fetchAllReviewsParallel(projectSlug, updatedDetails.values());
+
+        cache.mergeUpdatedPrs(updatedDetails, updatedReviews);
+    }
+
+    // --- Parallel fetch helpers (W1 fix: bounded executor instead of ForkJoinPool) ---
+
+    private Map<String, MergeRequest> fetchAllDetailsParallel(String projectSlug, Collection<MergeRequest> browsePrs) {
+        Map<String, MergeRequest> result = new ConcurrentHashMap<>();
+
+        List<CompletableFuture<Void>> futures = browsePrs.stream()
+                .map(mr -> CompletableFuture.runAsync(() -> {
+                    MergeRequest detail = fetchDetailSafe(projectSlug, mr);
+                    result.put(detail.getExternalId(), detail);
+                }, fetchExecutor))
+                .toList();
+
+        futures.forEach(CompletableFuture::join);
+        return result;
+    }
+
+    private Map<String, List<ReviewInfo>> fetchAllReviewsParallel(String projectSlug, Collection<MergeRequest> prs) {
         Map<String, List<ReviewInfo>> result = new ConcurrentHashMap<>();
 
-        // Only fetch reviews for merged PRs (saves API calls)
         List<MergeRequest> mergedPrs = prs.stream()
                 .filter(mr -> "merged".equals(mr.getState()))
                 .toList();
@@ -129,7 +221,7 @@ public class ActivityAnalysisService implements ActivityAnalysisUseCase {
                 .map(mr -> CompletableFuture.runAsync(() -> {
                     List<ReviewInfo> reviews = fetchReviewsSafe(projectSlug, mr);
                     result.put(mr.getExternalId(), reviews);
-                }))
+                }, fetchExecutor))
                 .toList();
 
         futures.forEach(CompletableFuture::join);
@@ -156,7 +248,10 @@ public class ActivityAnalysisService implements ActivityAnalysisUseCase {
         }
     }
 
-    private ContributorStats buildStats(List<MergeRequest> prs, List<ActivityFlag> flags) {
+    // --- Stats building ---
+
+    private ContributorStats buildStats(List<MergeRequest> prs, List<ActivityFlag> flags,
+                                         ProductivityMetrics productivity) {
         double avgSize = prs.stream()
                 .mapToInt(mr -> mr.getDiffStats().additions() + mr.getDiffStats().deletions())
                 .average()
@@ -168,7 +263,6 @@ public class ActivityAnalysisService implements ActivityAnalysisUseCase {
                 .average()
                 .orElse(0);
 
-        // Weekend percentage: only count PRs with known createdAt
         List<MergeRequest> prsWithDate = prs.stream()
                 .filter(mr -> mr.getCreatedAt() != null)
                 .toList();
@@ -180,7 +274,7 @@ public class ActivityAnalysisService implements ActivityAnalysisUseCase {
         Map<Severity, Long> flagCounts = flags.stream()
                 .collect(Collectors.groupingBy(ActivityFlag::severity, Collectors.counting()));
 
-        return new ContributorStats(prs.size(), avgSize, avgReviewTime, weekendPct, flagCounts);
+        return new ContributorStats(prs.size(), avgSize, avgReviewTime, weekendPct, flagCounts, productivity);
     }
 
     private Map<LocalDate, DailyActivity> buildDailyActivity(List<MergeRequest> prs,

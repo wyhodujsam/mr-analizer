@@ -18,6 +18,7 @@ public class MergeRequest {
     private final String state;
     private final LocalDateTime createdAt;
     private final LocalDateTime mergedAt;
+    private final LocalDateTime updatedAt;
     private final List<String> labels;
     private final List<ChangedFile> changedFiles;
     private final DiffStats diffStats;
@@ -40,6 +41,7 @@ public class MergeRequest {
         this.state = builder.state;
         this.createdAt = builder.createdAt;
         this.mergedAt = builder.mergedAt;
+        this.updatedAt = builder.updatedAt;
         this.labels = builder.labels != null ? List.copyOf(builder.labels) : List.of();
         this.changedFiles = builder.changedFiles != null ? List.copyOf(builder.changedFiles) : List.of();
         this.diffStats = builder.diffStats != null ? builder.diffStats : new DiffStats(0, 0, 0);
@@ -62,6 +64,7 @@ public class MergeRequest {
     public String getState() { return state; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getMergedAt() { return mergedAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
     public List<String> getLabels() { return labels; }
     public List<ChangedFile> getChangedFiles() { return changedFiles; }
     public DiffStats getDiffStats() { return diffStats; }
@@ -88,6 +91,7 @@ public class MergeRequest {
         private String state;
         private LocalDateTime createdAt;
         private LocalDateTime mergedAt;
+        private LocalDateTime updatedAt;
         private List<String> labels;
         private List<ChangedFile> changedFiles;
         private DiffStats diffStats;
@@ -111,6 +115,7 @@ public class MergeRequest {
         public Builder state(String state) { this.state = state; return this; }
         public Builder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
         public Builder mergedAt(LocalDateTime mergedAt) { this.mergedAt = mergedAt; return this; }
+        public Builder updatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; return this; }
         public Builder labels(List<String> labels) { this.labels = labels; return this; }
         public Builder changedFiles(List<ChangedFile> changedFiles) { this.changedFiles = changedFiles; return this; }
         public Builder diffStats(DiffStats diffStats) { this.diffStats = diffStats; return this; }
