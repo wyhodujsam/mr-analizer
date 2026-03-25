@@ -1,5 +1,6 @@
 package com.mranalizer.domain.port.out;
 
+import com.mranalizer.domain.model.ChangedFile;
 import com.mranalizer.domain.model.FetchCriteria;
 import com.mranalizer.domain.model.MergeRequest;
 
@@ -28,6 +29,11 @@ public interface MergeRequestProvider {
      * @return the merge request
      */
     MergeRequest fetchMergeRequest(String projectSlug, String mrId);
+
+    /**
+     * Fetches the list of changed files for a merge request.
+     */
+    List<ChangedFile> fetchFiles(String projectSlug, String mrId);
 
     /**
      * Fetches merge requests updated after the given timestamp.

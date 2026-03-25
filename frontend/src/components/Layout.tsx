@@ -10,6 +10,7 @@ export default function Layout() {
           <Nav className="ms-auto">
             <Nav.Link as={Link} to="/">Analiza PR</Nav.Link>
             <Nav.Link as={Link} to="/activity">Aktywność</Nav.Link>
+            <Nav.Link as={Link} to="/project">Analiza projektu</Nav.Link>
           </Nav>
         </Container>
       </Navbar>

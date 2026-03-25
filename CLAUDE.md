@@ -161,7 +161,18 @@ Moduł activity fetchuje N detail + N reviews = 2N calls. Mitigation:
 - Jeśli service woła `fetchMergeRequests` (lista) + `fetchMergeRequest` (detail), testy muszą mockować **oba**
 - Unit testy z mockami nie wyłapią problemów integracyjnych (np. GitHub API nie zwraca pól na liście) — rozważyć contract testy
 
+## Project Analysis Module
+
+Analiza WSZYSTKICH PR-ów repozytorium w trzech wymiarach: AI Potential, BDD, SDD.
+
+- **Domain**: `domain/model/project/`, `domain/service/project/`
+- **ArtifactDetector**: glob matching na `ChangedFile.path` — konfigurowalne wzorce BDD/SDD w `application.yml` (`mr-analizer.detection.bdd-patterns`, `sdd-patterns`)
+- **ProjectAnalysisService**: orkiestracja: activity cache → parallel fetchFiles → scoring → detection → summary (top rules, histogram, percents)
+- **REST**: `POST /api/project/{owner}/{repo}/analyze?useLlm=false` → `ProjectAnalysisResponse`
+- **Frontend**: `/project` route, `ProjectAnalysisPage`, `AiPotentialCard` (donut + histogram + top rules), `BddSddCards`, `ProjectPrTable` (sortowanie, filtry, expandable drill-down z score breakdown + pliki BDD/SDD)
+
 ## Recent Changes
+- 021-project-analysis: Project analysis page — AI Potential + BDD + SDD detection across all PRs, drill-down, histogram, top rules
 - 020-activity-cache-velocity: Incremental cache per-repo (TTL 15 min), 5 productivity metrics (velocity, cycle time, impact, churn, review engagement), `MergeRequest.updatedAt`, `fetchMergeRequestsUpdatedSince` on port, frontend metrics cards + refresh button
 - 015-user-activity-health: Activity dashboard, 6 detection rules, heatmap, BDD + unit tests
 - 012-performance-profiling: `/profile` command, DiagnosticsController, Actuator+Micrometer, async-profiler integration, `scripts/profile.sh`
