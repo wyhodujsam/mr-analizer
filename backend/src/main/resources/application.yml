@@ -8,13 +8,26 @@ mr-analizer:
     api-url: https://api.github.com
 
   llm:
-    adapter: claude-cli
+    adapter: claude-cli    # claude-cli | openai-api | anthropic-api | none
     claude-cli:
       command: claude
       timeout-seconds: 60
       prompt-template:
       response-score-field: scoreAdjustment
       response-comment-field: comment
+    openai-api:
+      url: ${LLM_API_URL:https://api.openai.com}
+      key: ${LLM_API_KEY:}
+      model: gpt-4o
+      temperature: 0.1
+      max-tokens: 2000
+      timeout-seconds: 60
+    anthropic-api:
+      url: ${ANTHROPIC_API_URL:https://api.anthropic.com}
+      key: ${ANTHROPIC_API_KEY:}
+      model: claude-sonnet-4-20250514
+      max-tokens: 2000
+      timeout-seconds: 60
 
   scoring:
     base-score: 0.5

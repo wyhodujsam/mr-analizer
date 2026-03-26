@@ -28,7 +28,14 @@ reports/                              # Performance profiling reports (gitignore
 
 Hexagonal (ports & adapters) backend + React SPA frontend. See `.specify/memory/constitution.md` for rules.
 
-LLM adapter: `claude-cli` (configurable in `application.yml`: `mr-analizer.llm.adapter`). Prompt in Polish via `PromptBuilder.DEFAULT_TEMPLATE`.
+LLM adapter (configurable in `application.yml`: `mr-analizer.llm.adapter`):
+- `claude-cli` — Claude CLI subprocess (default, requires `claude` in PATH)
+- `openai-api` — OpenAI-compatible HTTP API (works with OpenRouter, LiteLLM, vLLM, Ollama, Azure)
+- `anthropic-api` — Anthropic Messages API (native, with cache token support)
+- `none` — no LLM, rule-based scoring only
+
+All adapters share `LlmResponseParser` for JSON parsing and `PromptBuilder` for prompt generation (Polish).
+Config: `mr-analizer.llm.{adapter-name}.url`, `.key`, `.model`, `.max-tokens`, `.timeout-seconds`.
 
 ## Testing Approach — BDD + Unit + Frontend
 
