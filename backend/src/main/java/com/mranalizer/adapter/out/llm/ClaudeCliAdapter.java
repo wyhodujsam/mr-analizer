@@ -13,8 +13,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Component
@@ -28,9 +26,8 @@ public class ClaudeCliAdapter implements LlmAnalyzer {
     private final int timeoutSeconds;
     private final ObjectMapper objectMapper;
     private final PromptBuilder promptBuilder;
+    private final LlmResponseParser responseParser;
     private final String promptTemplate;
-    private final String responseScoreField;
-    private final String responseCommentField;
 
     public ClaudeCliAdapter(
             @Value("${mr-analizer.llm.claude-cli.command:claude}") String command,
@@ -42,10 +39,9 @@ public class ClaudeCliAdapter implements LlmAnalyzer {
         this.command = command;
         this.timeoutSeconds = timeoutSeconds;
         this.promptTemplate = promptTemplate;
-        this.responseScoreField = responseScoreField;
-        this.responseCommentField = responseCommentField;
         this.objectMapper = objectMapper;
         this.promptBuilder = new PromptBuilder();
+        this.responseParser = new LlmResponseParser(objectMapper, responseScoreField, responseCommentField);
     }
 
     @PostConstruct
@@ -58,13 +54,11 @@ public class ClaudeCliAdapter implements LlmAnalyzer {
             if (found) {
                 log.info("Claude CLI found at: {}", new String(process.getInputStream().readAllBytes()).trim());
             } else {
-                log.warn("Claude CLI command '{}' not found in PATH. LLM analysis calls will likely fail.", command);
+                log.warn("Claude CLI command '{}' not found in PATH.", command);
             }
         } catch (IOException | InterruptedException e) {
             log.warn("Could not verify Claude CLI availability: {}", e.getMessage());
-            if (e instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-            }
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
         }
     }
 
@@ -110,45 +104,23 @@ public class ClaudeCliAdapter implements LlmAnalyzer {
 
     private LlmAssessment parseResponse(String rawOutput) {
         try {
-            // Claude --output-format json wraps the result; extract the text content
             JsonNode root = objectMapper.readTree(rawOutput);
 
-            // The JSON output format may contain a "result" field with the text
+            // Claude --output-format json wraps result in {"result": "..."}
             String text = rawOutput;
             if (root.has("result")) {
                 text = root.get("result").asText();
             }
 
-            // Find JSON object in the text (Claude may wrap it in markdown)
-            int braceStart = text.indexOf('{');
-            int braceEnd = text.lastIndexOf('}');
-            if (braceStart >= 0 && braceEnd > braceStart) {
-                String jsonStr = text.substring(braceStart, braceEnd + 1);
-                JsonNode parsed = objectMapper.readTree(jsonStr);
+            // Delegate to shared parser
+            LlmAssessment base = responseParser.parseJsonResponse(text, PROVIDER);
 
-                double score = parsed.has(responseScoreField) ? parsed.get(responseScoreField).asDouble(0.0) : 0.0;
-                String comment = parsed.has(responseCommentField) ? parsed.get(responseCommentField).asText() : null;
+            // CLI-specific: cost info is in root JSON, not in content
+            LlmCost cost = parseCost(root);
 
-                // Clamp score to valid range
-                score = Math.max(-0.5, Math.min(0.5, score));
-
-                // Parse detailed analysis fields (all optional)
-                int overallAutomatability = parsed.has("overallAutomatability")
-                        ? parsed.get("overallAutomatability").asInt(0) : 0;
-
-                List<AnalysisCategory> categories = parseCategories(parsed);
-                List<HumanOversightItem> humanOversight = parseHumanOversight(parsed);
-                List<String> whyLlmFriendly = parseStringArray(parsed, "whyLlmFriendly");
-                List<SummaryAspect> summaryTable = parseSummaryTable(parsed);
-
-                LlmCost cost = parseCost(root);
-
-                return new LlmAssessment(score, comment, PROVIDER,
-                        overallAutomatability, categories, humanOversight, whyLlmFriendly, summaryTable, cost);
-            }
-
-            log.warn("Could not find JSON in Claude CLI response: {}", rawOutput);
-            return new LlmAssessment(0.0, "LLM error: no JSON in response", PROVIDER);
+            return new LlmAssessment(base.scoreAdjustment(), base.comment(), PROVIDER,
+                    base.overallAutomatability(), base.categories(), base.humanOversightRequired(),
+                    base.whyLlmFriendly(), base.summaryTable(), cost);
 
         } catch (Exception e) {
             log.warn("Failed to parse Claude CLI response: {}", e.getMessage());
@@ -173,54 +145,5 @@ public class ClaudeCliAdapter implements LlmAnalyzer {
             log.warn("Failed to parse LLM cost: {}", e.getMessage());
             return LlmCost.empty();
         }
-    }
-
-    private List<AnalysisCategory> parseCategories(JsonNode parsed) {
-        if (!parsed.has("categories") || !parsed.get("categories").isArray()) return List.of();
-        List<AnalysisCategory> result = new ArrayList<>();
-        for (JsonNode node : parsed.get("categories")) {
-            result.add(new AnalysisCategory(
-                    node.has("name") ? node.get("name").asText() : "",
-                    node.has("score") ? node.get("score").asInt(0) : 0,
-                    node.has("reasoning") ? node.get("reasoning").asText() : ""
-            ));
-        }
-        return result;
-    }
-
-    private List<HumanOversightItem> parseHumanOversight(JsonNode parsed) {
-        if (!parsed.has("humanOversightRequired") || !parsed.get("humanOversightRequired").isArray()) return List.of();
-        List<HumanOversightItem> result = new ArrayList<>();
-        for (JsonNode node : parsed.get("humanOversightRequired")) {
-            result.add(new HumanOversightItem(
-                    node.has("area") ? node.get("area").asText() : "",
-                    node.has("reasoning") ? node.get("reasoning").asText() : ""
-            ));
-        }
-        return result;
-    }
-
-    private List<String> parseStringArray(JsonNode parsed, String field) {
-        if (!parsed.has(field) || !parsed.get(field).isArray()) return List.of();
-        List<String> result = new ArrayList<>();
-        for (JsonNode node : parsed.get(field)) {
-            result.add(node.asText());
-        }
-        return result;
-    }
-
-    private List<SummaryAspect> parseSummaryTable(JsonNode parsed) {
-        if (!parsed.has("summaryTable") || !parsed.get("summaryTable").isArray()) return List.of();
-        List<SummaryAspect> result = new ArrayList<>();
-        for (JsonNode node : parsed.get("summaryTable")) {
-            Integer score = node.has("score") && !node.get("score").isNull()
-                    ? node.get("score").asInt() : null;
-            result.add(new SummaryAspect(
-                    node.has("aspect") ? node.get("aspect").asText() : "",
-                    score,
-                    node.has("note") ? node.get("note").asText() : ""
-            ));
-        }
-        return result;
     }
 }
